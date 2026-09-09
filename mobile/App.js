@@ -4,11 +4,12 @@ import {
   StyleSheet,
   Text,
   Alert,
-  TextInput,
   View,
 } from "react-native";
 
 import React, { useEffect, useState } from "react";
+import BudgetForm from "./components/BudgetForm";
+import ExpenseForm from "./components/ExpenseForm";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const transactions = [
@@ -49,14 +50,12 @@ const getCategoryIcon = (categoryName) =>
 
 export default function App() {
   const [showForm, setShowForm] = useState(false);
-  const [expenseName, setExpenseName] = useState("");
-  const [expenseAmount, setExpenseAmount] = useState("");
   const [editingTransactionId, setEditingTransactionId] = useState(null);
-  const [error, setError] = useState("");
+  const [editingTransaction, setEditingTransaction] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [expenseCategory, setExpenseCategory] = useState("Other");
   const [budget, setBudget] = useState(20000);
   const [isBudgetLoaded, setIsBudgetLoaded] = useState(false);
+  const [showBudgetForm, setShowBudgetForm] = useState(false);
 
   const [transactionList, setTransactionList] = useState(transactions);
 
@@ -166,10 +165,7 @@ export default function App() {
 
   const handleEditTransaction = (transaction) => {
     setEditingTransactionId(transaction.id);
-    setExpenseName(transaction.name);
-    setExpenseAmount(String(transaction.amount));
-    setExpenseCategory(transaction.category || "Other");
-    setError("");
+    setEditingTransaction(transaction);
     setShowForm(true);
   };
 
@@ -185,7 +181,13 @@ export default function App() {
           <Text style={styles.month}>September 2026</Text>
         </View>
 
-        <Text style={styles.settings}>⚙️</Text>
+        <Pressable
+          onPress={() => {
+            setShowBudgetForm(true);
+          }}
+        >
+          <Text style={styles.settings}>⚙️</Text>
+        </Pressable>
       </View>
 
       {/* Summary Card */}
@@ -238,145 +240,64 @@ export default function App() {
       <Pressable style={styles.addButton} onPress={() => setShowForm(true)}>
         <Text style={styles.addButtonText}>＋ Add Expense</Text>
       </Pressable>
+
       {/* Expense Form */}
-      {showForm && (
-        <View style={styles.form}>
-          <Text style={styles.formTitle}>Add Expense</Text>
+      <ExpenseForm
+        visible={showForm}
+        editingTransaction={editingTransaction}
+        remaining={remaining}
+        onSave={(expense) => {
+          if (editingTransactionId) {
+            setTransactionList((currentTransactions) =>
+              currentTransactions.map((transaction) =>
+                transaction.id === editingTransactionId
+                  ? {
+                      ...transaction,
+                      name: expense.name,
+                      amount: expense.amount,
+                      category: expense.category,
+                    }
+                  : transaction,
+              ),
+            );
+          } else {
+            const newTransaction = {
+              id: Date.now(),
+              name: expense.name,
+              amount: expense.amount,
+              category: expense.category,
+            };
 
-          <TextInput
-            style={styles.input}
-            placeholder="Expense name"
-            value={expenseName}
-            onChangeText={setExpenseName}
-          />
+            setTransactionList((currentTransactions) => [
+              ...currentTransactions,
+              newTransaction,
+            ]);
+          }
 
-          <TextInput
-            style={styles.input}
-            placeholder="Amount"
-            keyboardType="numeric"
-            value={expenseAmount}
-            onChangeText={setExpenseAmount}
-          />
+          setShowForm(false);
+          setEditingTransactionId(null);
+          setEditingTransaction(null);
+        }}
+        onCancel={() => {
+          setShowForm(false);
+          setEditingTransactionId(null);
+          setEditingTransaction(null);
+        }}
+      />
 
-          <Text style={styles.categoryLabel}>Category</Text>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.categoryList}
-          >
-            {categories.map((category) => (
-              <Pressable
-                key={category.name}
-                style={[
-                  styles.categoryButton,
-                  expenseCategory === category.name &&
-                    styles.categoryButtonSelected,
-                ]}
-                onPress={() => {
-                  setExpenseCategory(category.name);
-                  setError("");
-                }}
-              >
-                <Text style={styles.categoryIcon}>{category.icon}</Text>
-                <Text
-                  style={[
-                    styles.categoryOptionText,
-                    expenseCategory === category.name &&
-                      styles.categoryOptionTextSelected,
-                  ]}
-                >
-                  {category.name}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <Pressable
-            style={styles.saveButton}
-            onPress={() => {
-              const amount = Number(expenseAmount);
-
-              if (!expenseName.trim()) {
-                setError("Please enter an expense name");
-                return;
-              }
-
-              if (!expenseAmount || amount <= 0) {
-                setError("Please enter a valid amount");
-                return;
-              }
-
-              let adjustedRemaining = remaining;
-              if (editingTransactionId) {
-                const existingTransaction = transactionList.find(
-                  (transaction) => transaction.id === editingTransactionId,
-                );
-                if (existingTransaction) {
-                  adjustedRemaining += existingTransaction.amount;
-                }
-              }
-
-              if (amount > adjustedRemaining) {
-                setError("Expense exceeds your remaining budget");
-                return;
-              }
-              if (editingTransactionId) {
-                // Update existing transaction
-                setTransactionList((currentTransactions) =>
-                  currentTransactions.map((transaction) =>
-                    transaction.id === editingTransactionId
-                      ? {
-                          ...transaction,
-                          name: expenseName.trim(),
-                          amount,
-                          category: expenseCategory,
-                        }
-                      : transaction,
-                  ),
-                );
-              } else {
-                // Add new transaction
-                const newTransaction = {
-                  id: Date.now(),
-                  name: expenseName.trim(),
-                  amount,
-                  category: expenseCategory,
-                };
-
-                setTransactionList((currentTransactions) => [
-                  ...currentTransactions,
-                  newTransaction,
-                ]);
-              }
-              // Reset form
-              setExpenseName("");
-              setExpenseAmount("");
-              setEditingTransactionId(null);
-              setExpenseCategory("Other");
-              setShowForm(false);
-              setError("");
-            }}
-          >
-            <Text style={styles.saveButtonText}>Save Expense</Text>
-          </Pressable>
-
-          <Pressable
-            style={styles.cancelButton}
-            onPress={() => {
-              setShowForm(false);
-              setExpenseName("");
-              setExpenseAmount("");
-              setEditingTransactionId(null);
-              setExpenseCategory("Other");
-              setError("");
-            }}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </Pressable>
-        </View>
+      {/* Budget Form */}
+      {showBudgetForm && (
+        <BudgetForm
+          budget={budget}
+          totalSpent={totalSpent}
+          onSave={(newBudget) => {
+            setBudget(newBudget);
+            setShowBudgetForm(false);
+          }}
+          onCancel={() => {
+            setShowBudgetForm(false);
+          }}
+        />
       )}
     </ScrollView>
   );
@@ -490,98 +411,5 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
-  },
-  /* Expense Form Styles */
-  form: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 20,
-  },
-
-  formTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 15,
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-
-  saveButton: {
-    backgroundColor: "#000000",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  cancelButton: {
-    padding: 14,
-    alignItems: "center",
-  },
-
-  cancelButtonText: {
-    fontSize: 16,
-    color: "#64748B",
-  },
-
-  // Category Styles
-
-  categoryLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-
-  categoryList: {
-    marginBottom: 15,
-  },
-
-  categoryButton: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginRight: 8,
-    alignItems: "center",
-  },
-
-  categoryButtonSelected: {
-    backgroundColor: "#000000",
-    borderColor: "#000000",
-  },
-
-  categoryIcon: {
-    fontSize: 20,
-  },
-
-  categoryOptionText: {
-    fontSize: 12,
-    marginTop: 4,
-    color: "#334155",
-  },
-
-  categoryOptionTextSelected: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-
-  error: {
-    color: "#DC2626",
-    fontSize: 14,
-    marginBottom: 12,
   },
 });
