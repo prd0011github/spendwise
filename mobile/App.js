@@ -3,40 +3,60 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  Alert,
   TextInput,
   View,
 } from "react-native";
 
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const transactions = [
   {
     id: 1,
-    icon: "🛒",
     name: "Groceries",
     amount: 850,
+    category: "Shopping",
   },
   {
     id: 2,
-    icon: "☕",
     name: "Coffee",
     amount: 180,
+    category: "Food",
   },
   {
     id: 3,
-    icon: "🚕",
     name: "Transport",
     amount: 320,
+    category: "Transport",
   },
 ];
+const categoryIcons = {
+  Food: "🍔",
+  Shopping: "🛒",
+  Transport: "🚕",
+  Bills: "🏠",
+  Entertainment: "🎬",
+  Other: "📦",
+};
+const categories = Object.keys(categoryIcons).map((name) => ({
+  name,
+  icon: categoryIcons[name],
+}));
+
+const getCategoryIcon = (categoryName) =>
+  categoryIcons[categoryName] || categoryIcons.Other;
 
 export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [expenseName, setExpenseName] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
+  const [editingTransactionId, setEditingTransactionId] = useState(null);
   const [error, setError] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [expenseCategory, setExpenseCategory] = useState("Other");
   const [budget, setBudget] = useState(20000);
+  const [isBudgetLoaded, setIsBudgetLoaded] = useState(false);
 
   const [transactionList, setTransactionList] = useState(transactions);
 
@@ -46,6 +66,112 @@ export default function App() {
   );
 
   const remaining = budget - totalSpent;
+  const TRANSACTIONS_KEY = "@spendwise_transactions";
+  const BUDGET_KEY = "@spendwise_budget";
+
+  useEffect(() => {
+    const loadTransactions = async () => {
+      try {
+        const storedTransactions = await AsyncStorage.getItem(TRANSACTIONS_KEY);
+
+        if (storedTransactions) {
+          setTransactionList(JSON.parse(storedTransactions));
+        }
+      } catch (error) {
+        console.log("Error loading transactions:", error);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+
+    loadTransactions();
+  }, []);
+
+  useEffect(() => {
+    const loadBudget = async () => {
+      try {
+        const storedBudget = await AsyncStorage.getItem(BUDGET_KEY);
+
+        if (storedBudget) {
+          setBudget(Number(storedBudget));
+        }
+      } catch (error) {
+        console.log("Error loading budget:", error);
+      } finally {
+        setIsBudgetLoaded(true);
+      }
+    };
+
+    loadBudget();
+  }, []);
+
+  useEffect(() => {
+    if (!isBudgetLoaded) {
+      return;
+    }
+
+    const saveBudget = async () => {
+      try {
+        await AsyncStorage.setItem(BUDGET_KEY, String(budget));
+      } catch (error) {
+        console.log("Error saving budget:", error);
+      }
+    };
+
+    saveBudget();
+  }, [budget, isBudgetLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    const saveTransactions = async () => {
+      try {
+        await AsyncStorage.setItem(
+          TRANSACTIONS_KEY,
+          JSON.stringify(transactionList),
+        );
+      } catch (error) {
+        console.log("Error saving transactions:", error);
+      }
+    };
+
+    saveTransactions();
+  }, [transactionList, isLoaded]);
+
+  const handleDeleteTransaction = (id) => {
+    Alert.alert(
+      "Delete Expense",
+      "Are you sure you want to delete this expense?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            setTransactionList((currentTransactions) =>
+              currentTransactions.filter(
+                (transaction) => transaction.id !== id,
+              ),
+            );
+          },
+        },
+      ],
+    );
+  };
+
+  const handleEditTransaction = (transaction) => {
+    setEditingTransactionId(transaction.id);
+    setExpenseName(transaction.name);
+    setExpenseAmount(String(transaction.amount));
+    setExpenseCategory(transaction.category || "Other");
+    setError("");
+    setShowForm(true);
+  };
 
   return (
     <ScrollView
@@ -87,15 +213,26 @@ export default function App() {
       <Text style={styles.sectionTitle}>Recent Transactions</Text>
 
       {transactionList.map((transaction) => (
-        <View key={transaction.id} style={styles.transaction}>
-          <Text style={styles.transactionName}>
-            {transaction.icon} {transaction.name}
-          </Text>
+        <Pressable
+          key={transaction.id}
+          style={styles.transaction}
+          onPress={() => handleEditTransaction(transaction)}
+          onLongPress={() => handleDeleteTransaction(transaction.id)}
+        >
+          <View style={styles.transactionInfo}>
+            <Text style={styles.transactionName}>
+              {getCategoryIcon(transaction.category)} {transaction.name}
+            </Text>
+
+            <Text style={styles.categoryText}>
+              {transaction.category || "Other"}
+            </Text>
+          </View>
 
           <Text style={styles.expense}>
             -₹{transaction.amount.toLocaleString()}
           </Text>
-        </View>
+        </Pressable>
       ))}
 
       <Pressable style={styles.addButton} onPress={() => setShowForm(true)}>
@@ -121,6 +258,40 @@ export default function App() {
             onChangeText={setExpenseAmount}
           />
 
+          <Text style={styles.categoryLabel}>Category</Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryList}
+          >
+            {categories.map((category) => (
+              <Pressable
+                key={category.name}
+                style={[
+                  styles.categoryButton,
+                  expenseCategory === category.name &&
+                    styles.categoryButtonSelected,
+                ]}
+                onPress={() => {
+                  setExpenseCategory(category.name);
+                  setError("");
+                }}
+              >
+                <Text style={styles.categoryIcon}>{category.icon}</Text>
+                <Text
+                  style={[
+                    styles.categoryOptionText,
+                    expenseCategory === category.name &&
+                      styles.categoryOptionTextSelected,
+                  ]}
+                >
+                  {category.name}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable
@@ -138,21 +309,53 @@ export default function App() {
                 return;
               }
 
-              if (amount > remaining) {
+              let adjustedRemaining = remaining;
+              if (editingTransactionId) {
+                const existingTransaction = transactionList.find(
+                  (transaction) => transaction.id === editingTransactionId,
+                );
+                if (existingTransaction) {
+                  adjustedRemaining += existingTransaction.amount;
+                }
+              }
+
+              if (amount > adjustedRemaining) {
                 setError("Expense exceeds your remaining budget");
                 return;
               }
-              // Add expense to the list
-              const newTransaction = {
-                id: Date.now(),
-                name: expenseName,
-                amount,
-                icon: "🛒",
-              };
-              setTransactionList([...transactionList, newTransaction]);
+              if (editingTransactionId) {
+                // Update existing transaction
+                setTransactionList((currentTransactions) =>
+                  currentTransactions.map((transaction) =>
+                    transaction.id === editingTransactionId
+                      ? {
+                          ...transaction,
+                          name: expenseName.trim(),
+                          amount,
+                          category: expenseCategory,
+                        }
+                      : transaction,
+                  ),
+                );
+              } else {
+                // Add new transaction
+                const newTransaction = {
+                  id: Date.now(),
+                  name: expenseName.trim(),
+                  amount,
+                  category: expenseCategory,
+                };
+
+                setTransactionList((currentTransactions) => [
+                  ...currentTransactions,
+                  newTransaction,
+                ]);
+              }
               // Reset form
               setExpenseName("");
               setExpenseAmount("");
+              setEditingTransactionId(null);
+              setExpenseCategory("Other");
               setShowForm(false);
               setError("");
             }}
@@ -166,6 +369,8 @@ export default function App() {
               setShowForm(false);
               setExpenseName("");
               setExpenseAmount("");
+              setEditingTransactionId(null);
+              setExpenseCategory("Other");
               setError("");
             }}
           >
@@ -264,6 +469,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
+  transactionInfo: {
+    flex: 1,
+  },
+
   expense: {
     fontSize: 16,
     fontWeight: "600",
@@ -326,6 +535,48 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 16,
     color: "#64748B",
+  },
+
+  // Category Styles
+
+  categoryLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 10,
+  },
+
+  categoryList: {
+    marginBottom: 15,
+  },
+
+  categoryButton: {
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginRight: 8,
+    alignItems: "center",
+  },
+
+  categoryButtonSelected: {
+    backgroundColor: "#000000",
+    borderColor: "#000000",
+  },
+
+  categoryIcon: {
+    fontSize: 20,
+  },
+
+  categoryOptionText: {
+    fontSize: 12,
+    marginTop: 4,
+    color: "#334155",
+  },
+
+  categoryOptionTextSelected: {
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
 
   error: {
