@@ -7,4 +7,7 @@ const categoryIcons = {
   Other: "📦",
 };
 
+export const getCategoryIcon = (categoryName) =>
+  categoryIcons[categoryName] || categoryIcons.Other;
+
 export default categoryIcons;

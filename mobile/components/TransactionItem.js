@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, Alert, View } from "react-native";
-import categoryIcons from "../utils/categoryUtils";
+import { getCategoryIcon } from "../utils/categoryUtils";
 
 export default function TransactionItem({
   transactionList,
@@ -8,9 +8,6 @@ export default function TransactionItem({
   setEditingTransaction,
   setShowForm,
 }) {
-  const getCategoryIcon = (categoryName) =>
-    categoryIcons[categoryName] || categoryIcons.Other;
-
   const handleDeleteTransaction = (id) => {
     Alert.alert(
       "Delete Expense",

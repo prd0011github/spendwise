@@ -1,16 +1,11 @@
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  Alert,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import React, { useEffect, useState } from "react";
 import TransactionItem from "./components/TransactionItem";
 import BudgetForm from "./components/BudgetForm";
 import ExpenseForm from "./components/ExpenseForm";
+import CategorySummary from "./components/categorySummary";
+import TopSpending from "./components/TopSpending";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const transactions = [
@@ -175,6 +170,10 @@ export default function App() {
         setEditingTransaction={setEditingTransaction}
         setShowForm={setShowForm}
       />
+
+      <TopSpending transactions={transactionList} />
+
+      <CategorySummary transactions={transactionList} />
 
       <Pressable style={styles.addButton} onPress={() => setShowForm(true)}>
         <Text style={styles.addButtonText}>＋ Add Expense</Text>
