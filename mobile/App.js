@@ -8,6 +8,7 @@ import {
 } from "react-native";
 
 import React, { useEffect, useState } from "react";
+import TransactionItem from "./components/TransactionItem";
 import BudgetForm from "./components/BudgetForm";
 import ExpenseForm from "./components/ExpenseForm";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -32,21 +33,6 @@ const transactions = [
     category: "Transport",
   },
 ];
-const categoryIcons = {
-  Food: "🍔",
-  Shopping: "🛒",
-  Transport: "🚕",
-  Bills: "🏠",
-  Entertainment: "🎬",
-  Other: "📦",
-};
-const categories = Object.keys(categoryIcons).map((name) => ({
-  name,
-  icon: categoryIcons[name],
-}));
-
-const getCategoryIcon = (categoryName) =>
-  categoryIcons[categoryName] || categoryIcons.Other;
 
 export default function App() {
   const [showForm, setShowForm] = useState(false);
@@ -139,36 +125,6 @@ export default function App() {
     saveTransactions();
   }, [transactionList, isLoaded]);
 
-  const handleDeleteTransaction = (id) => {
-    Alert.alert(
-      "Delete Expense",
-      "Are you sure you want to delete this expense?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            setTransactionList((currentTransactions) =>
-              currentTransactions.filter(
-                (transaction) => transaction.id !== id,
-              ),
-            );
-          },
-        },
-      ],
-    );
-  };
-
-  const handleEditTransaction = (transaction) => {
-    setEditingTransactionId(transaction.id);
-    setEditingTransaction(transaction);
-    setShowForm(true);
-  };
-
   return (
     <ScrollView
       style={styles.container}
@@ -212,30 +168,13 @@ export default function App() {
 
       {/* Recent Transactions */}
 
-      <Text style={styles.sectionTitle}>Recent Transactions</Text>
-
-      {transactionList.map((transaction) => (
-        <Pressable
-          key={transaction.id}
-          style={styles.transaction}
-          onPress={() => handleEditTransaction(transaction)}
-          onLongPress={() => handleDeleteTransaction(transaction.id)}
-        >
-          <View style={styles.transactionInfo}>
-            <Text style={styles.transactionName}>
-              {getCategoryIcon(transaction.category)} {transaction.name}
-            </Text>
-
-            <Text style={styles.categoryText}>
-              {transaction.category || "Other"}
-            </Text>
-          </View>
-
-          <Text style={styles.expense}>
-            -₹{transaction.amount.toLocaleString()}
-          </Text>
-        </Pressable>
-      ))}
+      <TransactionItem
+        transactionList={transactionList}
+        setTransactionList={setTransactionList}
+        setEditingTransactionId={setEditingTransactionId}
+        setEditingTransaction={setEditingTransaction}
+        setShowForm={setShowForm}
+      />
 
       <Pressable style={styles.addButton} onPress={() => setShowForm(true)}>
         <Text style={styles.addButtonText}>＋ Add Expense</Text>
@@ -368,35 +307,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginTop: 4,
-  },
-
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginTop: 30,
-    marginBottom: 15,
-  },
-
-  transaction: {
-    backgroundColor: "#FFFFFF",
-    padding: 18,
-    borderRadius: 12,
-    marginBottom: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  transactionName: {
-    fontSize: 16,
-  },
-
-  transactionInfo: {
-    flex: 1,
-  },
-
-  expense: {
-    fontSize: 16,
-    fontWeight: "600",
   },
 
   addButton: {

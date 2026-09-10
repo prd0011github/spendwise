@@ -7,15 +7,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-
-const categoryIcons = {
-  Food: "🍔",
-  Shopping: "🛒",
-  Transport: "🚕",
-  Bills: "🏠",
-  Entertainment: "🎬",
-  Other: "📦",
-};
+import categoryIcons from "../utils/categoryUtils";
 
 const categories = Object.keys(categoryIcons).map((name) => ({
   name,
