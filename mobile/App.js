@@ -6,6 +6,7 @@ import BudgetForm from "./components/BudgetForm";
 import ExpenseForm from "./components/ExpenseForm";
 import CategorySummary from "./components/categorySummary";
 import TopSpending from "./components/TopSpending";
+import MonthlySummary from "./components/MonthlySummary";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const transactions = [
@@ -14,18 +15,21 @@ const transactions = [
     name: "Groceries",
     amount: 850,
     category: "Shopping",
+    date: "2026-09-01",
   },
   {
     id: 2,
     name: "Coffee",
     amount: 180,
     category: "Food",
+    date: "2026-08-02",
   },
   {
     id: 3,
     name: "Transport",
     amount: 320,
     category: "Transport",
+    date: "2026-10-03",
   },
 ];
 
@@ -49,13 +53,38 @@ export default function App() {
   const TRANSACTIONS_KEY = "@spendwise_transactions";
   const BUDGET_KEY = "@spendwise_budget";
 
+  // const clearStorage = async () => {
+  //   try {
+  //     await AsyncStorage.multiRemove([
+  //       "@spendwise_transactions",
+  //       "@spendwise_budget",
+  //     ]);
+
+  //     console.log("AsyncStorage cleared");
+  //   } catch (error) {
+  //     console.log("Error clearing AsyncStorage:", error);
+  //   }
+  // };
+
   useEffect(() => {
     const loadTransactions = async () => {
       try {
         const storedTransactions = await AsyncStorage.getItem(TRANSACTIONS_KEY);
 
+        // if (storedTransactions) {
+        //   setTransactionList(JSON.parse(storedTransactions));
+        // }
+
         if (storedTransactions) {
-          setTransactionList(JSON.parse(storedTransactions));
+          const parsedTransactions = JSON.parse(storedTransactions);
+
+          if (parsedTransactions.length > 0) {
+            setTransactionList(parsedTransactions);
+          } else {
+            setTransactionList(transactions);
+          }
+        } else {
+          setTransactionList(transactions);
         }
       } catch (error) {
         console.log("Error loading transactions:", error);
@@ -175,6 +204,8 @@ export default function App() {
 
       <CategorySummary transactions={transactionList} />
 
+      <MonthlySummary transactions={transactionList} />
+
       <Pressable style={styles.addButton} onPress={() => setShowForm(true)}>
         <Text style={styles.addButtonText}>＋ Add Expense</Text>
       </Pressable>
@@ -204,6 +235,7 @@ export default function App() {
               name: expense.name,
               amount: expense.amount,
               category: expense.category,
+              date: new Date().toISOString().split("T")[0],
             };
 
             setTransactionList((currentTransactions) => [
