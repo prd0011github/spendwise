@@ -7,6 +7,7 @@ import ExpenseForm from "./components/ExpenseForm";
 import CategorySummary from "./components/categorySummary";
 import TopSpending from "./components/TopSpending";
 import MonthlySummary from "./components/MonthlySummary";
+import TransactionFilter from "./components/TransactionFilter";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const transactions = [
@@ -41,6 +42,8 @@ export default function App() {
   const [budget, setBudget] = useState(20000);
   const [isBudgetLoaded, setIsBudgetLoaded] = useState(false);
   const [showBudgetForm, setShowBudgetForm] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   const [transactionList, setTransactionList] = useState(transactions);
 
@@ -65,6 +68,18 @@ export default function App() {
   //     console.log("Error clearing AsyncStorage:", error);
   //   }
   // };
+
+  const displayedTransactions = transactionList.filter((transaction) => {
+    const matchesSearch = transaction.name
+      .toLowerCase()
+      .includes(searchText.toLowerCase());
+
+    const matchesCategory =
+      selectedCategory === "All" ||
+      (transaction.category || "Other") === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
 
   useEffect(() => {
     const loadTransactions = async () => {
@@ -190,10 +205,17 @@ export default function App() {
         </View>
       </View>
 
+      <TransactionFilter
+        searchText={searchText}
+        setSearchText={setSearchText}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+      />
+
       {/* Recent Transactions */}
 
       <TransactionItem
-        transactionList={transactionList}
+        displayedTransactions={displayedTransactions}
         setTransactionList={setTransactionList}
         setEditingTransactionId={setEditingTransactionId}
         setEditingTransaction={setEditingTransaction}

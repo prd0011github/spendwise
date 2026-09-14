@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, Alert, View } from "react-native";
 import { getCategoryIcon } from "../utils/categoryUtils";
 
 export default function TransactionItem({
-  transactionList,
+  displayedTransactions,
   setTransactionList,
   setEditingTransactionId,
   setEditingTransaction,
@@ -42,28 +42,38 @@ export default function TransactionItem({
     <View>
       <Text style={styles.sectionTitle}>Recent Transactions</Text>
 
-      {transactionList.map((transaction) => (
-        <Pressable
-          key={transaction.id}
-          style={styles.transaction}
-          onPress={() => handleEditTransaction(transaction)}
-          onLongPress={() => handleDeleteTransaction(transaction.id)}
-        >
-          <View style={styles.transactionInfo}>
-            <Text style={styles.transactionName}>
-              {getCategoryIcon(transaction.category)} {transaction.name}
-            </Text>
-
-            <Text style={styles.categoryText}>
-              {transaction.category || "Other"}
-            </Text>
-          </View>
-
-          <Text style={styles.expense}>
-            -₹{transaction.amount.toLocaleString()}
+      {displayedTransactions.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyIcon}>🔍</Text>
+          <Text style={styles.emptyTitle}>No transactions found</Text>
+          <Text style={styles.emptyText}>
+            Try changing your search or category filter.
           </Text>
-        </Pressable>
-      ))}
+        </View>
+      ) : (
+        displayedTransactions.map((transaction) => (
+          <Pressable
+            key={transaction.id}
+            style={styles.transaction}
+            onPress={() => handleEditTransaction(transaction)}
+            onLongPress={() => handleDeleteTransaction(transaction.id)}
+          >
+            <View style={styles.transactionInfo}>
+              <Text style={styles.transactionName}>
+                {getCategoryIcon(transaction.category)} {transaction.name}
+              </Text>
+
+              <Text style={styles.categoryText}>
+                {transaction.category || "Other"}
+              </Text>
+            </View>
+
+            <Text style={styles.expense}>
+              -₹{transaction.amount.toLocaleString()}
+            </Text>
+          </Pressable>
+        ))
+      )}
     </View>
   );
 }
@@ -74,6 +84,30 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginTop: 30,
     marginBottom: 15,
+  },
+
+  emptyContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 30,
+    alignItems: "center",
+  },
+
+  emptyIcon: {
+    fontSize: 30,
+    marginBottom: 10,
+  },
+
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  emptyText: {
+    fontSize: 14,
+    color: "#64748B",
+    marginTop: 5,
+    textAlign: "center",
   },
 
   transaction: {
