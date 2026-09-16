@@ -174,8 +174,19 @@ export default function App() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Good morning 👋</Text>
-          <Text style={styles.month}>September 2026</Text>
+          <Text style={styles.greeting}>
+            {new Date().getHours() < 12
+              ? "Good morning 👋"
+              : new Date().getHours() < 18
+                ? "Good afternoon 👋"
+                : "Good evening 👋"}
+          </Text>
+          <Text style={styles.month}>
+            {new Date().toLocaleDateString("en-IN", {
+              month: "long",
+              year: "numeric",
+            })}
+          </Text>
         </View>
 
         <Pressable

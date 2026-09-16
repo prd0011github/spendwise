@@ -34,8 +34,27 @@ export default function MonthlySummary({ transactions }) {
     });
   };
 
-  const currentMonth = months[0];
-  const previousMonth = months[1];
+  const today = new Date();
+
+  const currentMonthKey = `${today.getFullYear()}-${String(
+    today.getMonth() + 1,
+  ).padStart(2, "0")}`;
+
+  const currentMonth = {
+    month: currentMonthKey,
+    amount: monthlyTotals[currentMonthKey] || 0,
+  };
+
+  const previousDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+
+  const previousMonthKey = `${previousDate.getFullYear()}-${String(
+    previousDate.getMonth() + 1,
+  ).padStart(2, "0")}`;
+
+  const previousMonth = {
+    month: previousMonthKey,
+    amount: monthlyTotals[previousMonthKey] || 0,
+  };
 
   let comparisonText = "No previous month data";
   let comparisonStyle = styles.neutral;
