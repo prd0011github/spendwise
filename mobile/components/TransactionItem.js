@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, Alert, View } from "react-native";
 import { getCategoryIcon } from "../utils/categoryUtils";
+import { formatTransactionDate } from "../utils/dateUtils";
 
 export default function TransactionItem({
   displayedTransactions,
@@ -64,7 +65,8 @@ export default function TransactionItem({
               </Text>
 
               <Text style={styles.categoryText}>
-                {transaction.category || "Other"}
+                {transaction.category || "Other"} •{" "}
+                {formatTransactionDate(transaction.date)}
               </Text>
             </View>
 
@@ -130,5 +132,10 @@ const styles = StyleSheet.create({
   expense: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  categoryText: {
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 4,
   },
 });
