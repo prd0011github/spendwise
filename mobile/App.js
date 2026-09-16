@@ -8,6 +8,8 @@ import CategorySummary from "./components/categorySummary";
 import TopSpending from "./components/TopSpending";
 import MonthlySummary from "./components/MonthlySummary";
 import TransactionFilter from "./components/TransactionFilter";
+import BudgetAlert from "./components/BudgetAlert";
+import BudgetProgress from "./components/BudgetProgress";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const transactions = [
@@ -204,6 +206,9 @@ export default function App() {
           </View>
         </View>
       </View>
+
+      <BudgetAlert budget={budget} totalSpent={totalSpent} />
+      <BudgetProgress budget={budget} totalSpent={totalSpent} />
 
       <TransactionFilter
         searchText={searchText}
