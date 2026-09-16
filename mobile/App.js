@@ -10,6 +10,7 @@ import MonthlySummary from "./components/MonthlySummary";
 import TransactionFilter from "./components/TransactionFilter";
 import BudgetAlert from "./components/BudgetAlert";
 import BudgetProgress from "./components/BudgetProgress";
+import TransactionSort from "./components/TransactionSort";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const transactions = [
@@ -46,6 +47,7 @@ export default function App() {
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedSort, setSelectedSort] = useState("newest");
 
   const [transactionList, setTransactionList] = useState(transactions);
 
@@ -71,17 +73,34 @@ export default function App() {
   //   }
   // };
 
-  const displayedTransactions = transactionList.filter((transaction) => {
-    const matchesSearch = transaction.name
-      .toLowerCase()
-      .includes(searchText.toLowerCase());
+  const displayedTransactions = transactionList
+    .filter((transaction) => {
+      const matchesSearch = transaction.name
+        .toLowerCase()
+        .includes(searchText.toLowerCase());
 
-    const matchesCategory =
-      selectedCategory === "All" ||
-      (transaction.category || "Other") === selectedCategory;
+      const matchesCategory =
+        selectedCategory === "All" ||
+        (transaction.category || "Other") === selectedCategory;
 
-    return matchesSearch && matchesCategory;
-  });
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      switch (selectedSort) {
+        case "oldest":
+          return new Date(a.date) - new Date(b.date);
+
+        case "highest":
+          return b.amount - a.amount;
+
+        case "lowest":
+          return a.amount - b.amount;
+
+        case "newest":
+        default:
+          return new Date(b.date) - new Date(a.date);
+      }
+    });
 
   useEffect(() => {
     const loadTransactions = async () => {
@@ -226,6 +245,11 @@ export default function App() {
         setSearchText={setSearchText}
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
+      />
+
+      <TransactionSort
+        selectedSort={selectedSort}
+        setSelectedSort={setSelectedSort}
       />
 
       {/* Recent Transactions */}
