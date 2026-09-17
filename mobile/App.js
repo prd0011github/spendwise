@@ -292,12 +292,18 @@ export default function App() {
               ),
             );
           } else {
+            const today = new Date();
+
+            const transactionDate = `${today.getFullYear()}-${String(
+              today.getMonth() + 1,
+            ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
             const newTransaction = {
               id: Date.now(),
               name: expense.name,
               amount: expense.amount,
               category: expense.category,
-              date: new Date().toISOString().split("T")[0],
+              date: transactionDate,
             };
 
             setTransactionList((currentTransactions) => [
