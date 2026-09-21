@@ -7,7 +7,7 @@ const {
 
 const addTransaction = async (req, res) => {
   try {
-    const transaction = await createTransaction(req.body);
+    const transaction = await createTransaction(req.userId, req.body);
 
     res.status(201).json({
       success: true,
@@ -35,7 +35,7 @@ const addTransaction = async (req, res) => {
 
 const getAllTransactions = async (req, res) => {
   try {
-    const transactions = await getTransactions();
+    const transactions = await getTransactions(req.userId);
 
     res.status(200).json({
       success: true,
@@ -53,7 +53,11 @@ const getAllTransactions = async (req, res) => {
 
 const editTransaction = async (req, res) => {
   try {
-    const transaction = await updateTransaction(req.params.id, req.body);
+    const transaction = await updateTransaction(
+      req.userId,
+      req.params.id,
+      req.body,
+    );
 
     if (!transaction) {
       return res.status(404).json({
@@ -88,7 +92,7 @@ const editTransaction = async (req, res) => {
 
 const removeTransaction = async (req, res) => {
   try {
-    const transaction = await deleteTransaction(req.params.id);
+    const transaction = await deleteTransaction(req.userId, req.params.id);
 
     if (!transaction) {
       return res.status(404).json({
