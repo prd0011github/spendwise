@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet, Text, Alert, View } from "react-native";
 import { getCategoryIcon } from "../utils/categoryUtils";
 import { formatTransactionDate } from "../utils/dateUtils";
+import { removeTransaction } from "../services/transactionService";
+import { getAuthToken } from "../services/authStorage";
 
 export default function TransactionItem({
   displayedTransactions,
@@ -24,12 +26,27 @@ export default function TransactionItem({
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            setTransactionList((currentTransactions) =>
-              currentTransactions.filter(
-                (transaction) => transaction.id !== id,
-              ),
-            );
+          onPress: async () => {
+            try {
+              const token = await getAuthToken();
+
+              if (!token) {
+                console.log("Authentication token is missing");
+                return;
+              }
+
+              await removeTransaction(token, id);
+
+              setTransactionList((currentTransactions) =>
+                currentTransactions.filter(
+                  (transaction) => transaction.id !== id,
+                ),
+              );
+            } catch (error) {
+              console.log("Error deleting transaction:", error.message);
+
+              return;
+            }
           },
         },
       ],

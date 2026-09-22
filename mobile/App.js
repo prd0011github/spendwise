@@ -14,6 +14,13 @@ import TransactionSort from "./components/TransactionSort";
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import { logout, restoreSession } from "./services/authService";
+import {
+  fetchTransactions,
+  addTransaction,
+  editTransaction,
+  removeTransaction,
+} from "./services/transactionService";
+import { getAuthToken } from "./services/authStorage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const transactions = [
@@ -210,6 +217,31 @@ export default function App() {
     restoreUserSession();
   }, []);
 
+  // Fetch transactions from the server when the user is logged in
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const loadServerTransactions = async () => {
+      try {
+        const token = await getAuthToken();
+
+        if (!token) {
+          return;
+        }
+
+        const serverTransactions = await fetchTransactions(token);
+
+        setTransactionList(serverTransactions);
+      } catch (error) {
+        console.log("Error loading server transactions:", error.message);
+      }
+    };
+
+    loadServerTransactions();
+  }, [user]);
+
   if (isAuthLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -334,39 +366,69 @@ export default function App() {
         visible={showForm}
         editingTransaction={editingTransaction}
         remaining={remaining}
-        onSave={(expense) => {
+        onSave={async (expense) => {
           if (editingTransactionId) {
-            setTransactionList((currentTransactions) =>
-              currentTransactions.map((transaction) =>
-                transaction.id === editingTransactionId
-                  ? {
-                      ...transaction,
-                      name: expense.name,
-                      amount: expense.amount,
-                      category: expense.category,
-                    }
-                  : transaction,
-              ),
-            );
+            try {
+              const token = await getAuthToken();
+
+              if (!token) {
+                console.log("Authentication token is missing");
+                return;
+              }
+
+              const updatedTransaction = await editTransaction(
+                token,
+                editingTransactionId,
+                {
+                  name: expense.name.trim(),
+                  amount: expense.amount,
+                  category: expense.category,
+                },
+              );
+
+              setTransactionList((currentTransactions) =>
+                currentTransactions.map((transaction) =>
+                  transaction.id === editingTransactionId
+                    ? updatedTransaction
+                    : transaction,
+                ),
+              );
+            } catch (error) {
+              console.log("Error updating transaction:", error.message);
+
+              return;
+            }
           } else {
-            const today = new Date();
+            try {
+              const token = await getAuthToken();
 
-            const transactionDate = `${today.getFullYear()}-${String(
-              today.getMonth() + 1,
-            ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+              if (!token) {
+                console.log("Authentication token is missing");
+                return;
+              }
 
-            const newTransaction = {
-              id: Date.now(),
-              name: expense.name,
-              amount: expense.amount,
-              category: expense.category,
-              date: transactionDate,
-            };
+              const today = new Date();
 
-            setTransactionList((currentTransactions) => [
-              ...currentTransactions,
-              newTransaction,
-            ]);
+              const transactionDate = `${today.getFullYear()}-${String(
+                today.getMonth() + 1,
+              ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+              const newTransaction = await addTransaction(token, {
+                name: expense.name.trim(),
+                amount: expense.amount,
+                category: expense.category,
+                date: transactionDate,
+              });
+
+              setTransactionList((currentTransactions) => [
+                ...currentTransactions,
+                newTransaction,
+              ]);
+            } catch (error) {
+              console.log("Error adding transaction:", error.message);
+
+              return;
+            }
           }
 
           setShowForm(false);
