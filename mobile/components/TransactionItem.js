@@ -4,6 +4,9 @@ import { formatTransactionDate } from "../utils/dateUtils";
 
 export default function TransactionItem({
   displayedTransactions,
+  totalDisplayedTransactions,
+  showAllTransactions,
+  setShowAllTransactions,
   setTransactionList,
   setEditingTransactionId,
   setEditingTransaction,
@@ -41,7 +44,9 @@ export default function TransactionItem({
 
   return (
     <View>
-      <Text style={styles.sectionTitle}>Recent Transactions</Text>
+      <Text style={styles.sectionTitle}>
+        Recent Transactions ({totalDisplayedTransactions})
+      </Text>
 
       {displayedTransactions.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -75,6 +80,16 @@ export default function TransactionItem({
             </Text>
           </Pressable>
         ))
+      )}
+      {totalDisplayedTransactions > 5 && (
+        <Pressable
+          style={styles.viewAllButton}
+          onPress={() => setShowAllTransactions(!showAllTransactions)}
+        >
+          <Text style={styles.viewAllText}>
+            {showAllTransactions ? "Show Less" : "View All"}
+          </Text>
+        </Pressable>
       )}
     </View>
   );
@@ -137,5 +152,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#64748B",
     marginTop: 4,
+  },
+  viewAllButton: {
+    alignItems: "center",
+    paddingVertical: 12,
+    marginTop: 5,
+    marginBottom: 10,
+  },
+
+  viewAllText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#000000",
   },
 });

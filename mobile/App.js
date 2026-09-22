@@ -11,6 +11,9 @@ import TransactionFilter from "./components/TransactionFilter";
 import BudgetAlert from "./components/BudgetAlert";
 import BudgetProgress from "./components/BudgetProgress";
 import TransactionSort from "./components/TransactionSort";
+import LoginScreen from "./screens/LoginScreen";
+import RegisterScreen from "./screens/RegisterScreen";
+import { logout, restoreSession } from "./services/authService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const transactions = [
@@ -50,6 +53,11 @@ export default function App() {
   const [selectedSort, setSelectedSort] = useState("newest");
 
   const [transactionList, setTransactionList] = useState(transactions);
+  const [showAllTransactions, setShowAllTransactions] = useState(false);
+
+  const [user, setUser] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [showRegister, setShowRegister] = useState(false);
 
   const totalSpent = transactionList.reduce(
     (total, transaction) => total + transaction.amount,
@@ -59,19 +67,6 @@ export default function App() {
   const remaining = budget - totalSpent;
   const TRANSACTIONS_KEY = "@spendwise_transactions";
   const BUDGET_KEY = "@spendwise_budget";
-
-  // const clearStorage = async () => {
-  //   try {
-  //     await AsyncStorage.multiRemove([
-  //       "@spendwise_transactions",
-  //       "@spendwise_budget",
-  //     ]);
-
-  //     console.log("AsyncStorage cleared");
-  //   } catch (error) {
-  //     console.log("Error clearing AsyncStorage:", error);
-  //   }
-  // };
 
   const displayedTransactions = transactionList
     .filter((transaction) => {
@@ -101,6 +96,10 @@ export default function App() {
           return new Date(b.date) - new Date(a.date);
       }
     });
+
+  const recentTransactions = showAllTransactions
+    ? displayedTransactions
+    : displayedTransactions.slice(0, 5);
 
   useEffect(() => {
     const loadTransactions = async () => {
@@ -185,6 +184,58 @@ export default function App() {
     saveTransactions();
   }, [transactionList, isLoaded]);
 
+  // Logout handler
+  const handleLogout = async () => {
+    await logout();
+    setUser(null);
+    setShowRegister(false);
+  };
+
+  // Authentication restoration
+  useEffect(() => {
+    const restoreUserSession = async () => {
+      try {
+        const session = await restoreSession();
+
+        if (session) {
+          setUser(session.user);
+        }
+      } catch (error) {
+        console.log("Error restoring session:", error);
+      } finally {
+        setIsAuthLoading(false);
+      }
+    };
+
+    restoreUserSession();
+  }, []);
+
+  if (isAuthLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!user) {
+    if (showRegister) {
+      return (
+        <RegisterScreen
+          onLogin={() => setShowRegister(false)}
+          onRegister={() => setShowRegister(false)}
+        />
+      );
+    }
+
+    return (
+      <LoginScreen
+        onLogin={(data) => setUser(data.user)}
+        onRegister={() => setShowRegister(true)}
+      />
+    );
+  }
+
   return (
     <ScrollView
       style={styles.container}
@@ -214,6 +265,9 @@ export default function App() {
           }}
         >
           <Text style={styles.settings}>⚙️</Text>
+        </Pressable>
+        <Pressable onPress={handleLogout}>
+          <Text style={styles.settings}>Logout</Text>
         </Pressable>
       </View>
 
@@ -255,7 +309,10 @@ export default function App() {
       {/* Recent Transactions */}
 
       <TransactionItem
-        displayedTransactions={displayedTransactions}
+        displayedTransactions={recentTransactions}
+        totalDisplayedTransactions={displayedTransactions.length}
+        showAllTransactions={showAllTransactions}
+        setShowAllTransactions={setShowAllTransactions}
         setTransactionList={setTransactionList}
         setEditingTransactionId={setEditingTransactionId}
         setEditingTransaction={setEditingTransaction}
@@ -342,6 +399,13 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+  },
+
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
