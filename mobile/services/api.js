@@ -92,6 +92,26 @@ export const deleteTransaction = async (token, transactionId) => {
   });
 };
 
+export const getBudget = async (token) => {
+  return apiRequest("/budget", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+export const updateBudget = async (token, budget) => {
+  return apiRequest("/budget", {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      budget,
+    }),
+  });
+};
+
 export const checkHealth = async () => {
   return apiRequest("/health");
 };

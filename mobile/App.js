@@ -18,48 +18,23 @@ import {
   fetchTransactions,
   addTransaction,
   editTransaction,
-  removeTransaction,
 } from "./services/transactionService";
 import { getAuthToken } from "./services/authStorage";
+import { fetchBudget, saveBudget } from "./services/budgetService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const transactions = [
-  {
-    id: 1,
-    name: "Groceries",
-    amount: 850,
-    category: "Shopping",
-    date: "2026-09-01",
-  },
-  {
-    id: 2,
-    name: "Coffee",
-    amount: 180,
-    category: "Food",
-    date: "2026-08-02",
-  },
-  {
-    id: 3,
-    name: "Transport",
-    amount: 320,
-    category: "Transport",
-    date: "2026-10-03",
-  },
-];
 
 export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState(null);
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [budget, setBudget] = useState(20000);
-  const [isBudgetLoaded, setIsBudgetLoaded] = useState(false);
+  const [budget, setBudget] = useState(0);
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedSort, setSelectedSort] = useState("newest");
 
-  const [transactionList, setTransactionList] = useState(transactions);
+  const [transactionList, setTransactionList] = useState([]);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
 
   const [user, setUser] = useState(null);
@@ -73,7 +48,6 @@ export default function App() {
 
   const remaining = budget - totalSpent;
   const TRANSACTIONS_KEY = "@spendwise_transactions";
-  const BUDGET_KEY = "@spendwise_budget";
 
   const displayedTransactions = transactionList
     .filter((transaction) => {
@@ -113,20 +87,8 @@ export default function App() {
       try {
         const storedTransactions = await AsyncStorage.getItem(TRANSACTIONS_KEY);
 
-        // if (storedTransactions) {
-        //   setTransactionList(JSON.parse(storedTransactions));
-        // }
-
         if (storedTransactions) {
-          const parsedTransactions = JSON.parse(storedTransactions);
-
-          if (parsedTransactions.length > 0) {
-            setTransactionList(parsedTransactions);
-          } else {
-            setTransactionList(transactions);
-          }
-        } else {
-          setTransactionList(transactions);
+          setTransactionList(JSON.parse(storedTransactions));
         }
       } catch (error) {
         console.log("Error loading transactions:", error);
@@ -139,38 +101,30 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!user) {
+      return;
+    }
+
     const loadBudget = async () => {
       try {
-        const storedBudget = await AsyncStorage.getItem(BUDGET_KEY);
+        const token = await getAuthToken();
 
-        if (storedBudget) {
-          setBudget(Number(storedBudget));
+        if (!token) {
+          return;
+        }
+
+        const budgetData = await fetchBudget(token);
+
+        if (budgetData) {
+          setBudget(Number(budgetData.budget));
         }
       } catch (error) {
-        console.log("Error loading budget:", error);
-      } finally {
-        setIsBudgetLoaded(true);
+        console.log("Error loading budget:", error.message);
       }
     };
 
     loadBudget();
-  }, []);
-
-  useEffect(() => {
-    if (!isBudgetLoaded) {
-      return;
-    }
-
-    const saveBudget = async () => {
-      try {
-        await AsyncStorage.setItem(BUDGET_KEY, String(budget));
-      } catch (error) {
-        console.log("Error saving budget:", error);
-      }
-    };
-
-    saveBudget();
-  }, [budget, isBudgetLoaded]);
+  }, [user]);
 
   useEffect(() => {
     if (!isLoaded) {
@@ -447,9 +401,22 @@ export default function App() {
         <BudgetForm
           budget={budget}
           totalSpent={totalSpent}
-          onSave={(newBudget) => {
-            setBudget(newBudget);
-            setShowBudgetForm(false);
+          onSave={async (newBudget) => {
+            try {
+              const token = await getAuthToken();
+
+              if (!token) {
+                console.log("Authentication token is missing");
+                return;
+              }
+
+              const budgetData = await saveBudget(token, newBudget);
+
+              setBudget(Number(budgetData.budget));
+              setShowBudgetForm(false);
+            } catch (error) {
+              console.log("Error saving budget:", error.message);
+            }
           }}
           onCancel={() => {
             setShowBudgetForm(false);
