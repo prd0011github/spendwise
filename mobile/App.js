@@ -20,7 +20,12 @@ import {
   editTransaction,
 } from "./services/transactionService";
 import { getAuthToken } from "./services/authStorage";
-import { fetchBudget, saveBudget } from "./services/budgetService";
+import {
+  fetchBudget,
+  saveBudget,
+  cacheBudget,
+  getCachedBudget,
+} from "./services/budgetService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function App() {
@@ -29,6 +34,7 @@ export default function App() {
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [budget, setBudget] = useState(0);
+  const [isBudgetLoading, setIsBudgetLoading] = useState(true);
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -47,7 +53,8 @@ export default function App() {
   );
 
   const remaining = budget - totalSpent;
-  const TRANSACTIONS_KEY = "@spendwise_transactions";
+  const getTransactionsCacheKey = (userId) =>
+    `@spendwise_transactions_${userId}`;
 
   const displayedTransactions = transactionList
     .filter((transaction) => {
@@ -83,30 +90,23 @@ export default function App() {
     : displayedTransactions.slice(0, 5);
 
   useEffect(() => {
-    const loadTransactions = async () => {
-      try {
-        const storedTransactions = await AsyncStorage.getItem(TRANSACTIONS_KEY);
-
-        if (storedTransactions) {
-          setTransactionList(JSON.parse(storedTransactions));
-        }
-      } catch (error) {
-        console.log("Error loading transactions:", error);
-      } finally {
-        setIsLoaded(true);
-      }
-    };
-
-    loadTransactions();
-  }, []);
-
-  useEffect(() => {
     if (!user) {
       return;
     }
 
     const loadBudget = async () => {
+      setIsBudgetLoading(true);
+
       try {
+        // Load cached budget first
+        const cachedBudget = await getCachedBudget(user.id);
+
+        if (cachedBudget !== null) {
+          setBudget(cachedBudget);
+          setIsBudgetLoading(false);
+        }
+
+        // Then try to get the latest budget from server
         const token = await getAuthToken();
 
         if (!token) {
@@ -116,10 +116,19 @@ export default function App() {
         const budgetData = await fetchBudget(token);
 
         if (budgetData) {
-          setBudget(Number(budgetData.budget));
+          const serverBudget = Number(budgetData.budget);
+
+          setBudget(serverBudget);
+
+          await cacheBudget(user.id, serverBudget);
         }
       } catch (error) {
-        console.log("Error loading budget:", error.message);
+        console.log("Error loading budget from server:", error.message);
+
+        // Cached budget is already displayed,
+        // so nothing else is required here.
+      } finally {
+        setIsBudgetLoading(false);
       }
     };
 
@@ -127,14 +136,16 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (!isLoaded) {
+    if (!isLoaded || !user) {
       return;
     }
 
     const saveTransactions = async () => {
       try {
+        const transactionsKey = getTransactionsCacheKey(user.id);
+
         await AsyncStorage.setItem(
-          TRANSACTIONS_KEY,
+          transactionsKey,
           JSON.stringify(transactionList),
         );
       } catch (error) {
@@ -143,7 +154,7 @@ export default function App() {
     };
 
     saveTransactions();
-  }, [transactionList, isLoaded]);
+  }, [transactionList, isLoaded, user]);
 
   // Logout handler
   const handleLogout = async () => {
@@ -158,7 +169,7 @@ export default function App() {
       try {
         const session = await restoreSession();
 
-        if (session) {
+        if (session?.user) {
           setUser(session.user);
         }
       } catch (error) {
@@ -177,7 +188,25 @@ export default function App() {
       return;
     }
 
-    const loadServerTransactions = async () => {
+    const loadTransactions = async () => {
+      const transactionsKey = getTransactionsCacheKey(user.id);
+
+      // Load cached transactions immediately
+      try {
+        const cachedTransactions = await AsyncStorage.getItem(transactionsKey);
+
+        if (cachedTransactions) {
+          setTransactionList(JSON.parse(cachedTransactions));
+
+          console.log("Loaded transactions from local cache");
+        }
+      } catch (cacheError) {
+        console.log("Error loading transaction cache:", cacheError.message);
+      } finally {
+        setIsLoaded(true);
+      }
+
+      // Then try to refresh from server
       try {
         const token = await getAuthToken();
 
@@ -188,12 +217,20 @@ export default function App() {
         const serverTransactions = await fetchTransactions(token);
 
         setTransactionList(serverTransactions);
+
+        await AsyncStorage.setItem(
+          transactionsKey,
+          JSON.stringify(serverTransactions),
+        );
       } catch (error) {
-        console.log("Error loading server transactions:", error.message);
+        console.log(
+          "Server unavailable, using cached transactions:",
+          error.message,
+        );
       }
     };
 
-    loadServerTransactions();
+    loadTransactions();
   }, [user]);
 
   if (isAuthLoading) {
@@ -265,13 +302,17 @@ export default function App() {
         <View style={styles.budgetRow}>
           <View>
             <Text style={styles.smallLabel}>Budget</Text>
-            <Text style={styles.smallAmount}>₹{budget.toLocaleString()}</Text>
+            <Text style={styles.smallAmount}>
+              {isBudgetLoading ? "Loading..." : `₹${budget.toLocaleString()}`}
+            </Text>
           </View>
 
           <View>
             <Text style={styles.smallLabel}>Remaining</Text>
             <Text style={styles.smallAmount}>
-              ₹{remaining.toLocaleString()}
+              {isBudgetLoading
+                ? "Loading..."
+                : `₹${remaining.toLocaleString()}`}
             </Text>
           </View>
         </View>
@@ -412,7 +453,12 @@ export default function App() {
 
               const budgetData = await saveBudget(token, newBudget);
 
-              setBudget(Number(budgetData.budget));
+              const updatedBudget = Number(budgetData.budget);
+
+              setBudget(updatedBudget);
+
+              await cacheBudget(user.id, updatedBudget);
+
               setShowBudgetForm(false);
             } catch (error) {
               console.log("Error saving budget:", error.message);

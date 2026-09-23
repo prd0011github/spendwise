@@ -1,11 +1,18 @@
 import { loginUser, registerUser, getCurrentUser } from "./api";
 
-import { saveAuthToken, getAuthToken, removeAuthToken } from "./authStorage";
+import {
+  saveAuthToken,
+  getAuthToken,
+  saveAuthUser,
+  getAuthUser,
+  removeAuthToken,
+} from "./authStorage";
 
 export const login = async (email, password) => {
   const response = await loginUser(email, password);
 
   await saveAuthToken(response.data.token);
+  await saveAuthUser(response.data.user);
 
   return response.data;
 };
@@ -24,13 +31,28 @@ export const restoreSession = async () => {
   try {
     const response = await getCurrentUser(token);
 
+    await saveAuthUser(response.data);
+
     return {
       token,
       user: response.data,
     };
   } catch (error) {
-    await removeAuthToken();
-    return null;
+    if (error.message === "Invalid or expired authentication token") {
+      await removeAuthToken();
+      return null;
+    }
+
+    const storedUser = await getAuthUser();
+
+    if (!storedUser) {
+      return null;
+    }
+
+    return {
+      token,
+      user: storedUser,
+    };
   }
 };
 
