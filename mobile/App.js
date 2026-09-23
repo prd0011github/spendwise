@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import React, { useEffect, useState } from "react";
+import NetInfo from "@react-native-community/netinfo";
 import TransactionItem from "./components/TransactionItem";
 import BudgetForm from "./components/BudgetForm";
 import ExpenseForm from "./components/ExpenseForm";
@@ -18,6 +19,9 @@ import {
   fetchTransactions,
   addTransaction,
   editTransaction,
+  getPendingTransactions,
+  savePendingTransactions,
+  syncPendingTransactions,
 } from "./services/transactionService";
 import { getAuthToken } from "./services/authStorage";
 import {
@@ -32,6 +36,7 @@ export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState(null);
   const [editingTransaction, setEditingTransaction] = useState(null);
+  const [isSavingTransaction, setIsSavingTransaction] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [budget, setBudget] = useState(0);
   const [isBudgetLoading, setIsBudgetLoading] = useState(true);
@@ -233,6 +238,63 @@ export default function App() {
     loadTransactions();
   }, [user]);
 
+  // Sync pending transactions when the user is logged in
+  const syncPendingTransactionsNow = async () => {
+    try {
+      const token = await getAuthToken();
+
+      if (!token) {
+        return;
+      }
+
+      const syncedTransactions = await syncPendingTransactions(user.id, token);
+
+      if (syncedTransactions.length === 0) {
+        return;
+      }
+
+      setTransactionList((currentTransactions) =>
+        currentTransactions.map((transaction) => {
+          const syncedTransaction = syncedTransactions.find(
+            (item) => item.localId === transaction.id,
+          );
+
+          return syncedTransaction
+            ? syncedTransaction.transaction
+            : transaction;
+        }),
+      );
+
+      console.log("Pending transactions synced successfully");
+    } catch (error) {
+      console.log("Pending transaction sync failed:", error.message);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    syncPendingTransactionsNow();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      if (!state.isConnected) {
+        return;
+      }
+
+      syncPendingTransactionsNow();
+    });
+
+    return unsubscribe;
+  }, [user]);
+
   if (isAuthLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -359,9 +421,16 @@ export default function App() {
       {/* Expense Form */}
       <ExpenseForm
         visible={showForm}
+        isSaving={isSavingTransaction}
         editingTransaction={editingTransaction}
         remaining={remaining}
         onSave={async (expense) => {
+          if (isSavingTransaction) {
+            return;
+          }
+
+          setIsSavingTransaction(true);
+
           if (editingTransactionId) {
             try {
               const token = await getAuthToken();
@@ -394,20 +463,35 @@ export default function App() {
               return;
             }
           } else {
+            const today = new Date();
+
+            const transactionDate = `${today.getFullYear()}-${String(
+              today.getMonth() + 1,
+            ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+            const localTransaction = {
+              id: `local_${Date.now()}`,
+              name: expense.name.trim(),
+              amount: expense.amount,
+              category: expense.category,
+              date: transactionDate,
+              isPendingSync: true,
+            };
+
+            // Add transaction immediately to the UI
+            setTransactionList((currentTransactions) => [
+              ...currentTransactions,
+              localTransaction,
+            ]);
+
             try {
               const token = await getAuthToken();
 
               if (!token) {
-                console.log("Authentication token is missing");
-                return;
+                throw new Error("Authentication token is missing");
               }
 
-              const today = new Date();
-
-              const transactionDate = `${today.getFullYear()}-${String(
-                today.getMonth() + 1,
-              ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-
+              // Try to sync with the server
               const newTransaction = await addTransaction(token, {
                 name: expense.name.trim(),
                 amount: expense.amount,
@@ -415,14 +499,32 @@ export default function App() {
                 date: transactionDate,
               });
 
-              setTransactionList((currentTransactions) => [
-                ...currentTransactions,
-                newTransaction,
-              ]);
-            } catch (error) {
-              console.log("Error adding transaction:", error.message);
+              // Replace the local transaction with the server transaction
+              setTransactionList((currentTransactions) =>
+                currentTransactions.map((transaction) =>
+                  transaction.id === localTransaction.id
+                    ? newTransaction
+                    : transaction,
+                ),
+              );
 
-              return;
+              console.log("Transaction synced successfully");
+            } catch (error) {
+              console.log(
+                "Transaction saved locally. Sync pending:",
+                error.message,
+              );
+
+              // Keep it as pending.
+              // The transaction is already in transactionList
+              // and will be persisted by the existing cache effect.
+
+              const pendingTransactions = await getPendingTransactions(user.id);
+
+              await savePendingTransactions(user.id, [
+                ...pendingTransactions,
+                localTransaction,
+              ]);
             }
           }
 

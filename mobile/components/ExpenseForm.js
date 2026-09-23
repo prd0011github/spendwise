@@ -18,6 +18,7 @@ export default function ExpenseForm({
   visible,
   editingTransaction,
   remaining,
+  isSaving,
   onSave,
   onCancel,
 }) {
@@ -47,6 +48,10 @@ export default function ExpenseForm({
   }
 
   const handleSave = () => {
+    if (isSaving) {
+      return;
+    }
+
     const amount = Number(expenseAmount);
 
     if (!expenseName.trim()) {
@@ -149,9 +154,17 @@ export default function ExpenseForm({
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Pressable style={styles.saveButton} onPress={handleSave}>
+      <Pressable
+        style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+        onPress={handleSave}
+        disabled={isSaving}
+      >
         <Text style={styles.saveButtonText}>
-          {isEditing ? "Update Expense" : "Save Expense"}
+          {isSaving
+            ? "Saving..."
+            : isEditing
+              ? "Update Expense"
+              : "Save Expense"}
         </Text>
       </Pressable>
 
@@ -230,6 +243,10 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 10,
     alignItems: "center",
+  },
+
+  saveButtonDisabled: {
+    opacity: 0.6,
   },
 
   saveButtonText: {
