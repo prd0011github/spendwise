@@ -119,10 +119,16 @@ export const syncPendingTransactions = async (userId, token) => {
 
     for (const transaction of pendingTransactions) {
       try {
-        let serverTransaction;
+        if (transaction.syncAction === "delete") {
+          await deleteTransaction(token, transaction.transactionId);
 
-        if (transaction.syncAction === "update") {
-          serverTransaction = await editTransaction(
+          syncedTransactions.push({
+            localId: transaction.transactionId,
+            transaction: null,
+            syncAction: "delete",
+          });
+        } else if (transaction.syncAction === "update") {
+          const serverTransaction = await editTransaction(
             token,
             transaction.transactionId,
             {
@@ -136,9 +142,10 @@ export const syncPendingTransactions = async (userId, token) => {
           syncedTransactions.push({
             localId: transaction.transactionId,
             transaction: serverTransaction,
+            syncAction: "update",
           });
         } else {
-          serverTransaction = await addTransaction(token, {
+          const serverTransaction = await addTransaction(token, {
             name: transaction.name,
             amount: transaction.amount,
             category: transaction.category,
@@ -148,6 +155,7 @@ export const syncPendingTransactions = async (userId, token) => {
           syncedTransactions.push({
             localId: transaction.id,
             transaction: serverTransaction,
+            syncAction: "create",
           });
         }
       } catch (error) {
@@ -192,6 +200,30 @@ export const addPendingTransactionUpdate = async (
     transactionId,
     ...transactionData,
     syncAction: "update",
+  });
+
+  await savePendingTransactions(userId, updatedPendingTransactions);
+};
+
+export const addPendingTransactionDelete = async (userId, transactionId) => {
+  if (!userId || !transactionId) {
+    return;
+  }
+
+  const pendingTransactions = await getPendingTransactions(userId);
+
+  const updatedPendingTransactions = pendingTransactions.filter(
+    (transaction) =>
+      !(
+        transaction.syncAction === "delete" &&
+        transaction.transactionId === transactionId
+      ),
+  );
+
+  updatedPendingTransactions.push({
+    id: `pending_delete_${transactionId}`,
+    transactionId,
+    syncAction: "delete",
   });
 
   await savePendingTransactions(userId, updatedPendingTransactions);

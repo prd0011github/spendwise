@@ -1,8 +1,11 @@
 import { Pressable, StyleSheet, Text, Alert, View } from "react-native";
 import { getCategoryIcon } from "../utils/categoryUtils";
 import { formatTransactionDate } from "../utils/dateUtils";
-import { removeTransaction } from "../services/transactionService";
-import { getAuthToken } from "../services/authStorage";
+import {
+  removeTransaction,
+  addPendingTransactionDelete,
+} from "../services/transactionService";
+import { getAuthToken, getAuthUser } from "../services/authStorage";
 
 export default function TransactionItem({
   displayedTransactions,
@@ -27,25 +30,41 @@ export default function TransactionItem({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
+            // Remove from UI immediately
+            setTransactionList((currentTransactions) =>
+              currentTransactions.filter(
+                (transaction) => transaction.id !== id,
+              ),
+            );
+
             try {
               const token = await getAuthToken();
 
               if (!token) {
-                console.log("Authentication token is missing");
-                return;
+                throw new Error("Authentication token is missing");
               }
 
               await removeTransaction(token, id);
 
-              setTransactionList((currentTransactions) =>
-                currentTransactions.filter(
-                  (transaction) => transaction.id !== id,
-                ),
-              );
+              console.log("Transaction deleted successfully");
             } catch (error) {
-              console.log("Error deleting transaction:", error.message);
+              console.log(
+                "Server unavailable. Saving delete locally:",
+                error.message,
+              );
 
-              return;
+              const currentUser = await getAuthUser();
+
+              if (!currentUser?.id) {
+                console.log(
+                  "Unable to save pending delete: user is not available",
+                );
+                return;
+              }
+
+              await addPendingTransactionDelete(currentUser.id, id);
+
+              console.log("Delete operation added to pending queue");
             }
           },
         },

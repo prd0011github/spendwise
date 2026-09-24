@@ -255,15 +255,25 @@ export default function App() {
       }
 
       setTransactionList((currentTransactions) =>
-        currentTransactions.map((transaction) => {
-          const syncedTransaction = syncedTransactions.find(
-            (item) => item.localId === transaction.id,
-          );
+        currentTransactions
+          .filter((transaction) => {
+            const syncedTransaction = syncedTransactions.find(
+              (item) => item.localId === transaction.id,
+            );
 
-          return syncedTransaction
-            ? syncedTransaction.transaction
-            : transaction;
-        }),
+            return !(
+              syncedTransaction && syncedTransaction.syncAction === "delete"
+            );
+          })
+          .map((transaction) => {
+            const syncedTransaction = syncedTransactions.find(
+              (item) => item.localId === transaction.id,
+            );
+
+            return syncedTransaction
+              ? syncedTransaction.transaction
+              : transaction;
+          }),
       );
 
       console.log("Pending transactions synced successfully");
