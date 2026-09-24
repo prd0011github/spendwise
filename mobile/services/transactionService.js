@@ -119,17 +119,37 @@ export const syncPendingTransactions = async (userId, token) => {
 
     for (const transaction of pendingTransactions) {
       try {
-        const serverTransaction = await addTransaction(token, {
-          name: transaction.name,
-          amount: transaction.amount,
-          category: transaction.category,
-          date: transaction.date,
-        });
+        let serverTransaction;
 
-        syncedTransactions.push({
-          localId: transaction.id,
-          transaction: serverTransaction,
-        });
+        if (transaction.syncAction === "update") {
+          serverTransaction = await editTransaction(
+            token,
+            transaction.transactionId,
+            {
+              name: transaction.name,
+              amount: transaction.amount,
+              category: transaction.category,
+              date: transaction.date,
+            },
+          );
+
+          syncedTransactions.push({
+            localId: transaction.transactionId,
+            transaction: serverTransaction,
+          });
+        } else {
+          serverTransaction = await addTransaction(token, {
+            name: transaction.name,
+            amount: transaction.amount,
+            category: transaction.category,
+            date: transaction.date,
+          });
+
+          syncedTransactions.push({
+            localId: transaction.id,
+            transaction: serverTransaction,
+          });
+        }
       } catch (error) {
         console.log(
           `Failed to sync transaction ${transaction.id}:`,
@@ -146,4 +166,33 @@ export const syncPendingTransactions = async (userId, token) => {
   } finally {
     isSyncingPendingTransactions = false;
   }
+};
+
+export const addPendingTransactionUpdate = async (
+  userId,
+  transactionId,
+  transactionData,
+) => {
+  if (!userId || !transactionId) {
+    return;
+  }
+
+  const pendingTransactions = await getPendingTransactions(userId);
+
+  const updatedPendingTransactions = pendingTransactions.filter(
+    (transaction) =>
+      !(
+        transaction.syncAction === "update" &&
+        transaction.transactionId === transactionId
+      ),
+  );
+
+  updatedPendingTransactions.push({
+    id: `pending_update_${transactionId}`,
+    transactionId,
+    ...transactionData,
+    syncAction: "update",
+  });
+
+  await savePendingTransactions(userId, updatedPendingTransactions);
 };

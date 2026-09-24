@@ -22,6 +22,7 @@ import {
   getPendingTransactions,
   savePendingTransactions,
   syncPendingTransactions,
+  addPendingTransactionUpdate,
 } from "./services/transactionService";
 import { getAuthToken } from "./services/authStorage";
 import {
@@ -432,22 +433,23 @@ export default function App() {
           setIsSavingTransaction(true);
 
           if (editingTransactionId) {
+            const updatedTransactionData = {
+              name: expense.name.trim(),
+              amount: expense.amount,
+              category: expense.category,
+            };
+
             try {
               const token = await getAuthToken();
 
               if (!token) {
-                console.log("Authentication token is missing");
-                return;
+                throw new Error("Authentication token is missing");
               }
 
               const updatedTransaction = await editTransaction(
                 token,
                 editingTransactionId,
-                {
-                  name: expense.name.trim(),
-                  amount: expense.amount,
-                  category: expense.category,
-                },
+                updatedTransactionData,
               );
 
               setTransactionList((currentTransactions) =>
@@ -458,9 +460,29 @@ export default function App() {
                 ),
               );
             } catch (error) {
-              console.log("Error updating transaction:", error.message);
+              console.log(
+                "Server unavailable. Updating transaction locally:",
+                error.message,
+              );
 
-              return;
+              setTransactionList((currentTransactions) =>
+                currentTransactions.map((transaction) =>
+                  transaction.id === editingTransactionId
+                    ? {
+                        ...transaction,
+                        ...updatedTransactionData,
+                        isPendingSync: true,
+                        syncAction: "update",
+                      }
+                    : transaction,
+                ),
+              );
+
+              await addPendingTransactionUpdate(
+                user.id,
+                editingTransactionId,
+                updatedTransactionData,
+              );
             }
           } else {
             const today = new Date();
