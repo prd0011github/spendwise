@@ -197,13 +197,12 @@ export default function App() {
     const loadTransactions = async () => {
       const transactionsKey = getTransactionsCacheKey(user.id);
 
-      // Load cached transactions immediately
       try {
+        // 1. Load cached transactions first
         const cachedTransactions = await AsyncStorage.getItem(transactionsKey);
 
         if (cachedTransactions) {
           setTransactionList(JSON.parse(cachedTransactions));
-
           console.log("Loaded transactions from local cache");
         }
       } catch (cacheError) {
@@ -212,7 +211,6 @@ export default function App() {
         setIsLoaded(true);
       }
 
-      // Then try to refresh from server
       try {
         const token = await getAuthToken();
 
@@ -220,14 +218,26 @@ export default function App() {
           return;
         }
 
+        // 2. Sync pending offline operations first
+        const syncedTransactions = await syncPendingTransactions(
+          user.id,
+          token,
+        );
+
+        console.log("Pending transactions synced:", syncedTransactions);
+
+        // 3. Fetch latest server transactions
         const serverTransactions = await fetchTransactions(token);
 
+        // 4. Use server as the latest source of truth
         setTransactionList(serverTransactions);
 
         await AsyncStorage.setItem(
           transactionsKey,
           JSON.stringify(serverTransactions),
         );
+
+        console.log("Transactions refreshed from server");
       } catch (error) {
         console.log(
           "Server unavailable, using cached transactions:",
@@ -281,14 +291,6 @@ export default function App() {
       console.log("Pending transaction sync failed:", error.message);
     }
   };
-
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-
-    syncPendingTransactionsNow();
-  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -449,6 +451,103 @@ export default function App() {
               category: expense.category,
             };
 
+            const transactionId = editingTransactionId;
+
+            // Update UI immediately
+            setTransactionList((currentTransactions) =>
+              currentTransactions.map((transaction) =>
+                transaction.id === transactionId
+                  ? {
+                      ...transaction,
+                      ...updatedTransactionData,
+                      isPendingSync: true,
+                      syncAction: "update",
+                    }
+                  : transaction,
+              ),
+            );
+
+            // Close form immediately
+            setShowForm(false);
+            setEditingTransactionId(null);
+            setEditingTransaction(null);
+
+            // Local operation is complete
+            setIsSavingTransaction(false);
+
+            // Sync with server in the background
+            void (async () => {
+              try {
+                const token = await getAuthToken();
+
+                if (!token) {
+                  throw new Error("Authentication token is missing");
+                }
+
+                const updatedTransaction = await editTransaction(
+                  token,
+                  transactionId,
+                  updatedTransactionData,
+                );
+
+                // Replace local transaction with server transaction
+                setTransactionList((currentTransactions) =>
+                  currentTransactions.map((transaction) =>
+                    transaction.id === transactionId
+                      ? updatedTransaction
+                      : transaction,
+                  ),
+                );
+
+                console.log("Transaction updated successfully");
+              } catch (error) {
+                console.log(
+                  "Transaction updated locally. Sync pending:",
+                  error.message,
+                );
+
+                await addPendingTransactionUpdate(
+                  user.id,
+                  transactionId,
+                  updatedTransactionData,
+                );
+              }
+            })();
+
+            return;
+          }
+
+          const today = new Date();
+
+          const transactionDate = `${today.getFullYear()}-${String(
+            today.getMonth() + 1,
+          ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+          const localTransaction = {
+            id: `local_${Date.now()}`,
+            name: expense.name.trim(),
+            amount: expense.amount,
+            category: expense.category,
+            date: transactionDate,
+            isPendingSync: true,
+          };
+
+          // Add transaction immediately to UI
+          setTransactionList((currentTransactions) => [
+            ...currentTransactions,
+            localTransaction,
+          ]);
+
+          // Close form immediately
+          setShowForm(false);
+          setEditingTransactionId(null);
+          setEditingTransaction(null);
+
+          // Local operation is complete
+          setIsSavingTransaction(false);
+
+          // Sync with server in the background
+          void (async () => {
             try {
               const token = await getAuthToken();
 
@@ -456,74 +555,6 @@ export default function App() {
                 throw new Error("Authentication token is missing");
               }
 
-              const updatedTransaction = await editTransaction(
-                token,
-                editingTransactionId,
-                updatedTransactionData,
-              );
-
-              setTransactionList((currentTransactions) =>
-                currentTransactions.map((transaction) =>
-                  transaction.id === editingTransactionId
-                    ? updatedTransaction
-                    : transaction,
-                ),
-              );
-            } catch (error) {
-              console.log(
-                "Server unavailable. Updating transaction locally:",
-                error.message,
-              );
-
-              setTransactionList((currentTransactions) =>
-                currentTransactions.map((transaction) =>
-                  transaction.id === editingTransactionId
-                    ? {
-                        ...transaction,
-                        ...updatedTransactionData,
-                        isPendingSync: true,
-                        syncAction: "update",
-                      }
-                    : transaction,
-                ),
-              );
-
-              await addPendingTransactionUpdate(
-                user.id,
-                editingTransactionId,
-                updatedTransactionData,
-              );
-            }
-          } else {
-            const today = new Date();
-
-            const transactionDate = `${today.getFullYear()}-${String(
-              today.getMonth() + 1,
-            ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-
-            const localTransaction = {
-              id: `local_${Date.now()}`,
-              name: expense.name.trim(),
-              amount: expense.amount,
-              category: expense.category,
-              date: transactionDate,
-              isPendingSync: true,
-            };
-
-            // Add transaction immediately to the UI
-            setTransactionList((currentTransactions) => [
-              ...currentTransactions,
-              localTransaction,
-            ]);
-
-            try {
-              const token = await getAuthToken();
-
-              if (!token) {
-                throw new Error("Authentication token is missing");
-              }
-
-              // Try to sync with the server
               const newTransaction = await addTransaction(token, {
                 name: expense.name.trim(),
                 amount: expense.amount,
@@ -531,7 +562,7 @@ export default function App() {
                 date: transactionDate,
               });
 
-              // Replace the local transaction with the server transaction
+              // Replace local transaction with server transaction
               setTransactionList((currentTransactions) =>
                 currentTransactions.map((transaction) =>
                   transaction.id === localTransaction.id
@@ -547,10 +578,6 @@ export default function App() {
                 error.message,
               );
 
-              // Keep it as pending.
-              // The transaction is already in transactionList
-              // and will be persisted by the existing cache effect.
-
               const pendingTransactions = await getPendingTransactions(user.id);
 
               await savePendingTransactions(user.id, [
@@ -558,11 +585,7 @@ export default function App() {
                 localTransaction,
               ]);
             }
-          }
-
-          setShowForm(false);
-          setEditingTransactionId(null);
-          setEditingTransaction(null);
+          })();
         }}
         onCancel={() => {
           setShowForm(false);
