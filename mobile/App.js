@@ -2,6 +2,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import React, { useEffect, useState } from "react";
 import NetInfo from "@react-native-community/netinfo";
+import { exportTransactionsToCsv } from "./services/exportService";
+import { printTransactionsReport } from "./services/printService";
 import TransactionItem from "./components/TransactionItem";
 import BudgetForm from "./components/BudgetForm";
 import ExpenseForm from "./components/ExpenseForm";
@@ -74,6 +76,22 @@ function App() {
     }
 
     return "Good evening";
+  };
+
+  const handleExportTransactions = async () => {
+    try {
+      await exportTransactionsToCsv(transactionList);
+    } catch (error) {
+      console.log("Transaction export failed:", error.message);
+    }
+  };
+
+  const handlePrintReport = async () => {
+    try {
+      await printTransactionsReport(transactionList);
+    } catch (error) {
+      console.log("Print report failed:", error.message);
+    }
   };
 
   const totalSpent = transactionList.reduce(
@@ -428,6 +446,8 @@ function App() {
         setShowMenu={setShowMenu}
         setShowBudgetForm={setShowBudgetForm}
         handleLogout={handleLogout}
+        onExport={handleExportTransactions}
+        onPrintReport={handlePrintReport}
       />
       {/* Summary Card */}
       <View

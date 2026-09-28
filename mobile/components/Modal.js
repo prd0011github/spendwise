@@ -8,6 +8,8 @@ export default function ModalComponent({
   setShowMenu,
   setShowBudgetForm,
   handleLogout,
+  onExport,
+  onPrintReport,
 }) {
   const { colors, themeMode, updateTheme } = useTheme();
 
@@ -47,7 +49,10 @@ export default function ModalComponent({
 
             <Pressable
               style={styles.menuItem}
-              onPress={() => setShowMenu(false)}
+              onPress={() => {
+                setShowMenu(false);
+                onExport();
+              }}
             >
               <Text style={styles.menuIcon}>📤</Text>
               <Text
@@ -59,7 +64,10 @@ export default function ModalComponent({
 
             <Pressable
               style={styles.menuItem}
-              onPress={() => setShowMenu(false)}
+              onPress={() => {
+                setShowMenu(false);
+                onPrintReport();
+              }}
             >
               <Text style={styles.menuIcon}>🖨️</Text>
               <Text
