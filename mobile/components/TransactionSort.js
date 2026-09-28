@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useTheme } from "../context/ThemeContext";
 
 const sortOptions = [
   { label: "Newest", value: "newest" },
@@ -9,6 +10,10 @@ const sortOptions = [
 ];
 
 export default function TransactionSort({ selectedSort, setSelectedSort }) {
+  const { colors, spacing, radius } = useTheme();
+
+  const styles = createStyles(colors, spacing, radius);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Sort By</Text>
@@ -39,44 +44,46 @@ export default function TransactionSort({ selectedSort, setSelectedSort }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginTop: 15,
-  },
+const createStyles = (colors, spacing, radius) =>
+  StyleSheet.create({
+    container: {
+      marginTop: spacing.md,
+    },
 
-  title: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
+    title: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
 
-  options: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
+    options: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
 
-  option: {
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
+    option: {
+      backgroundColor: colors.surface,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.round,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
 
-  selectedOption: {
-    backgroundColor: "#000000",
-    borderColor: "#000000",
-  },
+    selectedOption: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
 
-  optionText: {
-    fontSize: 13,
-    color: "#475569",
-    fontWeight: "600",
-  },
+    optionText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      fontWeight: "600",
+    },
 
-  selectedOptionText: {
-    color: "#FFFFFF",
-  },
-});
+    selectedOptionText: {
+      color: colors.white,
+    },
+  });

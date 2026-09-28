@@ -12,6 +12,7 @@ import TransactionFilter from "./components/TransactionFilter";
 import BudgetAlert from "./components/BudgetAlert";
 import BudgetProgress from "./components/BudgetProgress";
 import TransactionSort from "./components/TransactionSort";
+import ModalComponent from "./components/Modal";
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import { logout, restoreSession } from "./services/authService";
@@ -31,9 +32,11 @@ import {
   cacheBudget,
   getCachedBudget,
 } from "./services/budgetService";
+import { ThemeProvider } from "./context/ThemeContext";
+import { useTheme } from "./context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export default function App() {
+function App() {
   const [showForm, setShowForm] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState(null);
   const [editingTransaction, setEditingTransaction] = useState(null);
@@ -52,6 +55,26 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [showRegister, setShowRegister] = useState(false);
+
+  const [showMenu, setShowMenu] = useState(false);
+
+  const { colors, spacing, typography, radius } = useTheme();
+
+  const styles = createStyles(colors, spacing, typography, radius);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+
+    if (hour < 12) {
+      return "Good morning";
+    }
+
+    if (hour < 18) {
+      return "Good afternoon";
+    }
+
+    return "Good evening";
+  };
 
   const totalSpent = transactionList.reduce(
     (total, transaction) => total + transaction.amount,
@@ -340,76 +363,187 @@ export default function App() {
       contentContainerStyle={styles.contentContainer}
     >
       {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>
-            {new Date().getHours() < 12
-              ? "Good morning 👋"
-              : new Date().getHours() < 18
-                ? "Good afternoon 👋"
-                : "Good evening 👋"}
+      <View
+        style={[
+          styles.header,
+          {
+            marginTop: spacing.xxxl,
+            marginBottom: spacing.xl,
+          },
+        ]}
+      >
+        <View style={styles.headerContent}>
+          <Text
+            style={[
+              styles.greeting,
+              {
+                color: colors.textPrimary,
+              },
+            ]}
+          >
+            {getGreeting()}, {user?.name || "there"} 👋
           </Text>
-          <Text style={styles.month}>
+
+          <Text
+            style={[
+              styles.headerDate,
+              {
+                color: colors.textSecondary,
+              },
+            ]}
+          >
             {new Date().toLocaleDateString("en-IN", {
+              weekday: "long",
               month: "long",
+              day: "numeric",
               year: "numeric",
             })}
           </Text>
         </View>
 
         <Pressable
-          onPress={() => {
-            setShowBudgetForm(true);
-          }}
+          style={[
+            styles.menuButton,
+            {
+              backgroundColor: colors.surfaceSecondary,
+            },
+          ]}
+          onPress={() => setShowMenu(true)}
         >
-          <Text style={styles.settings}>⚙️</Text>
-        </Pressable>
-        <Pressable onPress={handleLogout}>
-          <Text style={styles.settings}>Logout</Text>
+          <Text
+            style={[
+              styles.menuButtonText,
+              {
+                color: colors.textPrimary,
+              },
+            ]}
+          >
+            ⋮
+          </Text>
         </Pressable>
       </View>
-
+      {/*three dot modal */}
+      <ModalComponent
+        showMenu={showMenu}
+        setShowMenu={setShowMenu}
+        setShowBudgetForm={setShowBudgetForm}
+        handleLogout={handleLogout}
+      />
       {/* Summary Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardLabel}>Total spent</Text>
-        <Text style={styles.amount}>₹{totalSpent.toLocaleString()}</Text>
+      <View
+        style={[
+          styles.summaryCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.summaryLabel,
+            {
+              color: colors.textSecondary,
+            },
+          ]}
+        >
+          THIS MONTH
+        </Text>
 
-        <View style={styles.budgetRow}>
-          <View>
-            <Text style={styles.smallLabel}>Budget</Text>
-            <Text style={styles.smallAmount}>
-              {isBudgetLoading ? "Loading..." : `₹${budget.toLocaleString()}`}
+        <Text
+          style={[
+            styles.summaryAmount,
+            {
+              color: colors.textPrimary,
+            },
+          ]}
+        >
+          ₹{totalSpent.toLocaleString()}
+        </Text>
+
+        <Text
+          style={[
+            styles.summarySubtext,
+            {
+              color: colors.textSecondary,
+            },
+          ]}
+        >
+          Total spent
+        </Text>
+
+        <View
+          style={[
+            styles.summaryDivider,
+            {
+              backgroundColor: colors.border,
+            },
+          ]}
+        />
+
+        <View style={styles.summaryStats}>
+          <View style={styles.summaryStat}>
+            <Text
+              style={[
+                styles.summaryStatLabel,
+                {
+                  color: colors.textSecondary,
+                },
+              ]}
+            >
+              Budget
+            </Text>
+
+            <Text
+              style={[
+                styles.summaryStatAmount,
+                {
+                  color: colors.textPrimary,
+                },
+              ]}
+            >
+              ₹{budget.toLocaleString()}
             </Text>
           </View>
 
-          <View>
-            <Text style={styles.smallLabel}>Remaining</Text>
-            <Text style={styles.smallAmount}>
-              {isBudgetLoading
-                ? "Loading..."
-                : `₹${remaining.toLocaleString()}`}
+          <View style={[styles.summaryStat, styles.summaryColumnRight]}>
+            <Text
+              style={[
+                styles.summaryStatLabel,
+                {
+                  color: colors.textSecondary,
+                },
+              ]}
+            >
+              Remaining
+            </Text>
+
+            <Text
+              style={[
+                styles.summaryStatAmount,
+                {
+                  color: remaining < 0 ? colors.danger : colors.textPrimary,
+                },
+              ]}
+            >
+              ₹{remaining.toLocaleString()}
             </Text>
           </View>
         </View>
       </View>
-
       <BudgetAlert budget={budget} totalSpent={totalSpent} />
       <BudgetProgress budget={budget} totalSpent={totalSpent} />
-
       <TransactionFilter
         searchText={searchText}
         setSearchText={setSearchText}
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
       />
-
       <TransactionSort
         selectedSort={selectedSort}
         setSelectedSort={setSelectedSort}
       />
-
       {/* Recent Transactions */}
-
       <TransactionItem
         displayedTransactions={recentTransactions}
         totalDisplayedTransactions={displayedTransactions.length}
@@ -420,17 +554,12 @@ export default function App() {
         setEditingTransaction={setEditingTransaction}
         setShowForm={setShowForm}
       />
-
       <TopSpending transactions={transactionList} />
-
       <CategorySummary transactions={transactionList} />
-
       <MonthlySummary transactions={transactionList} />
-
       <Pressable style={styles.addButton} onPress={() => setShowForm(true)}>
         <Text style={styles.addButtonText}>＋ Add Expense</Text>
       </Pressable>
-
       {/* Expense Form */}
       <ExpenseForm
         visible={showForm}
@@ -593,7 +722,6 @@ export default function App() {
           setEditingTransaction(null);
         }}
       />
-
       {/* Budget Form */}
       {showBudgetForm && (
         <BudgetForm
@@ -630,91 +758,140 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
-  },
+export default function AppWithTheme() {
+  return (
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
+  );
+}
 
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    padding: 20,
-  },
-  contentContainer: {
-    paddingBottom: 80,
-  },
+const createStyles = (colors, spacing, typography, radius) =>
+  StyleSheet.create({
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: colors.background,
+    },
 
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 40,
-  },
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: spacing.lg,
+    },
 
-  greeting: {
-    fontSize: 24,
-    fontWeight: "700",
-  },
+    contentContainer: {
+      paddingBottom: 80,
+    },
 
-  month: {
-    fontSize: 14,
-    color: "#64748B",
-    marginTop: 5,
-  },
+    // header style
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      width: "100%",
+    },
 
-  settings: {
-    fontSize: 28,
-  },
+    headerContent: {
+      flex: 1,
+      paddingRight: spacing.md,
+    },
 
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 30,
-  },
+    greeting: {
+      fontSize: 20,
+      fontWeight: "700",
+      lineHeight: 28,
+      color: colors.textPrimary,
+    },
 
-  cardLabel: {
-    fontSize: 14,
-    color: "#64748B",
-  },
+    headerDate: {
+      marginTop: spacing.xs,
+      fontSize: 14,
+      fontWeight: "500",
+      lineHeight: 20,
+      color: colors.textSecondary,
+    },
 
-  amount: {
-    fontSize: 32,
-    fontWeight: "700",
-    marginTop: 5,
-  },
+    menuButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surfaceSecondary,
+    },
 
-  budgetRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 25,
-  },
+    menuButtonText: {
+      fontSize: 30,
+      fontWeight: "700",
+      lineHeight: 32,
+      color: colors.textPrimary,
+    },
+    // summary card style
+    summaryCard: {
+      borderRadius: 20,
+      borderWidth: 1,
+      padding: 20,
+      marginBottom: 16,
+    },
 
-  smallLabel: {
-    fontSize: 13,
-    color: "#64748B",
-  },
+    summaryLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+    },
 
-  smallAmount: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginTop: 4,
-  },
+    summaryAmount: {
+      fontSize: 32,
+      fontWeight: "700",
+      marginTop: 8,
+    },
 
-  addButton: {
-    marginTop: 25,
-    backgroundColor: "#000000", //"#3B82F6"
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
+    summarySubtext: {
+      fontSize: 14,
+      marginTop: 4,
+    },
 
-  addButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});
+    summaryDivider: {
+      height: 1,
+      marginVertical: 18,
+    },
+
+    summaryStats: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+
+    summaryStat: {
+      flex: 1,
+    },
+
+    summaryColumnRight: {
+      alignItems: "flex-end",
+    },
+
+    summaryStatLabel: {
+      fontSize: 13,
+      marginBottom: 4,
+    },
+
+    summaryStatAmount: {
+      fontSize: 17,
+      fontWeight: "700",
+    },
+
+    addButton: {
+      marginTop: spacing.lg,
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.md,
+      borderRadius: radius.lg,
+      alignItems: "center",
+    },
+
+    addButtonText: {
+      color: colors.white,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+  });

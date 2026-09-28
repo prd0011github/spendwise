@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useTheme } from "../context/ThemeContext";
 
 export default function BudgetForm({ budget, totalSpent, onSave, onCancel }) {
+  const { colors, spacing, radius } = useTheme();
+
+  const styles = createStyles(colors, spacing, radius);
+
   const [budgetInput, setBudgetInput] = useState(String(budget));
   const [budgetError, setBudgetError] = useState("");
 
@@ -33,6 +38,7 @@ export default function BudgetForm({ budget, totalSpent, onSave, onCancel }) {
       <TextInput
         style={styles.input}
         placeholder="Enter monthly budget"
+        placeholderTextColor={colors.textMuted}
         keyboardType="numeric"
         value={budgetInput}
         onChangeText={(value) => {
@@ -54,55 +60,61 @@ export default function BudgetForm({ budget, totalSpent, onSave, onCancel }) {
   );
 }
 
-const styles = StyleSheet.create({
-  form: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 20,
-  },
+const createStyles = (colors, spacing, radius) =>
+  StyleSheet.create({
+    form: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: radius.lg,
+      padding: spacing.xl,
+      marginTop: spacing.xl,
+    },
 
-  formTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 15,
-  },
+    formTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+    },
 
-  input: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
-    marginBottom: 12,
-  },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceSecondary,
+      color: colors.textPrimary,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      fontSize: 16,
+      marginBottom: spacing.md,
+    },
 
-  saveButton: {
-    backgroundColor: "#000000",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-  },
+    saveButton: {
+      backgroundColor: colors.primary,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      alignItems: "center",
+    },
 
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+    saveButtonText: {
+      color: colors.white,
+      fontSize: 16,
+      fontWeight: "700",
+    },
 
-  cancelButton: {
-    padding: 14,
-    alignItems: "center",
-  },
+    cancelButton: {
+      padding: spacing.md,
+      alignItems: "center",
+    },
 
-  cancelButtonText: {
-    fontSize: 16,
-    color: "#64748B",
-  },
+    cancelButtonText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
 
-  error: {
-    color: "#DC2626",
-    fontSize: 14,
-    marginBottom: 12,
-  },
-});
+    error: {
+      color: colors.danger,
+      fontSize: 14,
+      marginBottom: spacing.md,
+    },
+  });

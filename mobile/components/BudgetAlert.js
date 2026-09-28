@@ -1,7 +1,12 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTheme } from "../context/ThemeContext";
 
 export default function BudgetAlert({ budget, totalSpent }) {
+  const { colors, spacing, radius } = useTheme();
+
+  const styles = createStyles(colors, spacing, radius);
+
   if (budget <= 0) {
     return null;
   }
@@ -34,49 +39,57 @@ export default function BudgetAlert({ budget, totalSpent }) {
 
       <View style={styles.content}>
         <Text style={styles.title}>Budget Alert</Text>
+
         <Text style={styles.message}>{message}</Text>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 20,
-  },
+const createStyles = (colors, spacing, radius) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginTop: spacing.xl,
+      borderWidth: 1,
+    },
 
-  normal: {
-    backgroundColor: "#F8FAFC",
-  },
+    normal: {
+      backgroundColor: colors.surfaceSecondary,
+      borderColor: colors.border,
+    },
 
-  warning: {
-    backgroundColor: "#FEF3C7",
-  },
+    warning: {
+      backgroundColor: colors.warningLight,
+      borderColor: colors.warning,
+    },
 
-  danger: {
-    backgroundColor: "#FEE2E2",
-  },
+    danger: {
+      backgroundColor: colors.dangerLight,
+      borderColor: colors.danger,
+    },
 
-  icon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
+    icon: {
+      fontSize: 24,
+      marginRight: spacing.md,
+    },
 
-  content: {
-    flex: 1,
-  },
+    content: {
+      flex: 1,
+    },
 
-  title: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
+    title: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
 
-  message: {
-    fontSize: 14,
-    marginTop: 3,
-  },
-});
+    message: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+  });

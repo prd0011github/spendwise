@@ -8,6 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { categories } from "../utils/categoryUtils";
+import { useTheme } from "../context/ThemeContext";
 
 export default function TransactionFilter({
   searchText,
@@ -15,11 +16,16 @@ export default function TransactionFilter({
   selectedCategory,
   setSelectedCategory,
 }) {
+  const { colors, spacing, radius } = useTheme();
+
+  const styles = createStyles(colors, spacing, radius);
+
   return (
     <View style={styles.container}>
       <TextInput
         style={styles.searchInput}
         placeholder="Search expenses..."
+        placeholderTextColor={colors.textMuted}
         value={searchText}
         onChangeText={setSearchText}
       />
@@ -77,46 +83,49 @@ export default function TransactionFilter({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginTop: 20,
-  },
+const createStyles = (colors, spacing, radius) =>
+  StyleSheet.create({
+    container: {
+      marginTop: spacing.xl,
+    },
 
-  searchInput: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
+    searchInput: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      fontSize: 16,
+      color: colors.textPrimary,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
 
-  categoryContainer: {
-    paddingVertical: 12,
-    gap: 8,
-  },
+    categoryContainer: {
+      paddingVertical: spacing.md,
+      gap: spacing.sm,
+    },
 
-  categoryButton: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
+    categoryButton: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.round,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
 
-  selectedCategory: {
-    backgroundColor: "#000000",
-    borderColor: "#000000",
-  },
+    selectedCategory: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
 
-  categoryText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
+    categoryText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
 
-  selectedCategoryText: {
-    color: "#FFFFFF",
-  },
-});
+    selectedCategoryText: {
+      color: colors.white,
+    },
+  });

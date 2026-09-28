@@ -1,13 +1,18 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTheme } from "../context/ThemeContext";
 
 export default function BudgetProgress({ budget, totalSpent }) {
+  const { colors, spacing, radius } = useTheme();
+
   if (budget <= 0) {
     return null;
   }
 
   const percentage = Math.min((totalSpent / budget) * 100, 100);
   const remaining = Math.max(budget - totalSpent, 0);
+
+  const styles = createStyles(colors, spacing, radius);
 
   return (
     <View style={styles.container}>
@@ -32,57 +37,62 @@ export default function BudgetProgress({ budget, totalSpent }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 20,
-  },
+const createStyles = (colors, spacing, radius) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: radius.lg,
+      padding: spacing.xl,
+      marginTop: spacing.xl,
+    },
 
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
 
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
 
-  percentage: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
+    percentage: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
 
-  progressBackground: {
-    height: 10,
-    backgroundColor: "#E2E8F0",
-    borderRadius: 10,
-    overflow: "hidden",
-    marginTop: 15,
-  },
+    progressBackground: {
+      height: 10,
+      backgroundColor: colors.border,
+      borderRadius: radius.round,
+      overflow: "hidden",
+      marginTop: spacing.md,
+    },
 
-  progressBar: {
-    height: "100%",
-    backgroundColor: "#000000",
-    borderRadius: 10,
-  },
+    progressBar: {
+      height: "100%",
+      backgroundColor: colors.primary,
+      borderRadius: radius.round,
+    },
 
-  footer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
+    footer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: spacing.sm,
+    },
 
-  spent: {
-    fontSize: 13,
-    color: "#64748B",
-  },
+    spent: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
 
-  remaining: {
-    fontSize: 13,
-    color: "#64748B",
-  },
-});
+    remaining: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+  });

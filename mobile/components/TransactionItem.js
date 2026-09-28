@@ -6,6 +6,7 @@ import {
   addPendingTransactionDelete,
 } from "../services/transactionService";
 import { getAuthToken, getAuthUser } from "../services/authStorage";
+import { useTheme } from "../context/ThemeContext";
 
 export default function TransactionItem({
   displayedTransactions,
@@ -17,6 +18,10 @@ export default function TransactionItem({
   setEditingTransaction,
   setShowForm,
 }) {
+  const { colors, spacing, radius } = useTheme();
+
+  const styles = createStyles(colors, spacing, radius);
+
   const handleDeleteTransaction = (id) => {
     Alert.alert(
       "Delete Expense",
@@ -30,7 +35,6 @@ export default function TransactionItem({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            // Remove from UI immediately
             setTransactionList((currentTransactions) =>
               currentTransactions.filter(
                 (transaction) => transaction.id !== id,
@@ -87,7 +91,9 @@ export default function TransactionItem({
       {displayedTransactions.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>🔍</Text>
+
           <Text style={styles.emptyTitle}>No transactions found</Text>
+
           <Text style={styles.emptyText}>
             Try changing your search or category filter.
           </Text>
@@ -117,6 +123,7 @@ export default function TransactionItem({
           </Pressable>
         ))
       )}
+
       {totalDisplayedTransactions > 5 && (
         <Pressable
           style={styles.viewAllButton}
@@ -131,74 +138,87 @@ export default function TransactionItem({
   );
 }
 
-const styles = StyleSheet.create({
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginTop: 30,
-    marginBottom: 15,
-  },
+const createStyles = (colors, spacing, radius) =>
+  StyleSheet.create({
+    sectionTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginTop: spacing.xxl,
+      marginBottom: spacing.md,
+    },
 
-  emptyContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 30,
-    alignItems: "center",
-  },
+    emptyContainer: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: radius.md,
+      padding: spacing.xxxl,
+      alignItems: "center",
+    },
 
-  emptyIcon: {
-    fontSize: 30,
-    marginBottom: 10,
-  },
+    emptyIcon: {
+      fontSize: 30,
+      marginBottom: spacing.sm,
+    },
 
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
 
-  emptyText: {
-    fontSize: 14,
-    color: "#64748B",
-    marginTop: 5,
-    textAlign: "center",
-  },
+    emptyText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+      textAlign: "center",
+    },
 
-  transaction: {
-    backgroundColor: "#FFFFFF",
-    padding: 18,
-    borderRadius: 12,
-    marginBottom: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+    transaction: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      padding: spacing.lg,
+      borderRadius: radius.md,
+      marginBottom: spacing.sm,
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
 
-  transactionName: {
-    fontSize: 16,
-  },
+    transactionName: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
 
-  transactionInfo: {
-    flex: 1,
-  },
+    transactionInfo: {
+      flex: 1,
+      paddingRight: spacing.md,
+    },
 
-  expense: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  categoryText: {
-    fontSize: 13,
-    color: "#64748B",
-    marginTop: 4,
-  },
-  viewAllButton: {
-    alignItems: "center",
-    paddingVertical: 12,
-    marginTop: 5,
-    marginBottom: 10,
-  },
+    expense: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.danger,
+    },
 
-  viewAllText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#000000",
-  },
-});
+    categoryText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+
+    viewAllButton: {
+      alignItems: "center",
+      paddingVertical: spacing.md,
+      marginTop: spacing.xs,
+      marginBottom: spacing.sm,
+    },
+
+    viewAllText: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+  });

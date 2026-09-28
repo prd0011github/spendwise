@@ -1,7 +1,12 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTheme } from "../context/ThemeContext";
 
 export default function MonthlySummary({ transactions }) {
+  const { colors, spacing, radius } = useTheme();
+
+  const styles = createStyles(colors, spacing, radius);
+
   const monthlyTotals = transactions.reduce((totals, transaction) => {
     if (!transaction.date) {
       return totals;
@@ -112,67 +117,74 @@ export default function MonthlySummary({ transactions }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 20,
-  },
+const createStyles = (colors, spacing, radius) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: radius.lg,
+      padding: spacing.xl,
+      marginTop: spacing.xl,
+    },
 
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 18,
-  },
+    title: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: spacing.lg,
+    },
 
-  currentMonth: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-  },
+    currentMonth: {
+      backgroundColor: colors.surfaceSecondary,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginBottom: spacing.sm,
+    },
 
-  month: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
+    month: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
 
-  currentAmount: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginTop: 6,
-  },
+    currentAmount: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginTop: spacing.xs,
+    },
 
-  comparison: {
-    fontSize: 14,
-    marginTop: 6,
-    fontWeight: "600",
-  },
+    comparison: {
+      fontSize: 14,
+      marginTop: spacing.xs,
+      fontWeight: "600",
+    },
 
-  increase: {
-    color: "#DC2626",
-  },
+    increase: {
+      color: colors.danger,
+    },
 
-  decrease: {
-    color: "#16A34A",
-  },
+    decrease: {
+      color: colors.success,
+    },
 
-  neutral: {
-    color: "#64748B",
-  },
+    neutral: {
+      color: colors.textSecondary,
+    },
 
-  monthRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
+    monthRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
 
-  amount: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-});
+    amount: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+  });
