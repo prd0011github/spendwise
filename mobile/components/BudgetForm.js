@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 
-export default function BudgetForm({ budget, totalSpent, onSave, onCancel }) {
+export default function BudgetForm({ budget, onSave, onCancel }) {
   const { colors, spacing, radius } = useTheme();
 
   const styles = createStyles(colors, spacing, radius);
@@ -22,7 +22,6 @@ export default function BudgetForm({ budget, totalSpent, onSave, onCancel }) {
       setBudgetError("Please enter a valid budget");
       return;
     }
-
     onSave(newBudget);
   };
 

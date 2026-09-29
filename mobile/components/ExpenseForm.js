@@ -18,7 +18,6 @@ const categories = Object.keys(categoryIcons).map((name) => ({
 export default function ExpenseForm({
   visible,
   editingTransaction,
-  remaining,
   isSaving,
   onSave,
   onCancel,

@@ -5,8 +5,6 @@ import NetInfo from "@react-native-community/netinfo";
 import { exportTransactionsToCsv } from "./services/exportService";
 import { printTransactionsReport } from "./services/printService";
 import TransactionItem from "./components/TransactionItem";
-import BudgetForm from "./components/BudgetForm";
-import ExpenseForm from "./components/ExpenseForm";
 import CategorySummary from "./components/categorySummary";
 import TopSpending from "./components/TopSpending";
 import MonthlySummary from "./components/MonthlySummary";
@@ -18,6 +16,7 @@ import ModalComponent from "./components/Modal";
 import Analytics from "./components/Analytics";
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
+import FormScreen from "./screens/FormScreen";
 import { logout, restoreSession } from "./services/authService";
 import {
   fetchTransactions,
@@ -34,6 +33,9 @@ import {
   saveBudget,
   cacheBudget,
   getCachedBudget,
+  savePendingBudget,
+  clearPendingBudget,
+  syncPendingBudget,
 } from "./services/budgetService";
 import { ThemeProvider } from "./context/ThemeContext";
 import { useTheme } from "./context/ThemeContext";
@@ -343,16 +345,247 @@ function App() {
       return;
     }
 
+    const syncPendingData = async () => {
+      const token = await getAuthToken();
+
+      if (!token) {
+        return;
+      }
+
+      await syncPendingTransactionsNow();
+
+      const syncedBudget = await syncPendingBudget(user.id, token);
+
+      if (syncedBudget !== null) {
+        setBudget(syncedBudget);
+      }
+    };
+
     const unsubscribe = NetInfo.addEventListener((state) => {
       if (!state.isConnected) {
         return;
       }
 
-      syncPendingTransactionsNow();
+      void syncPendingData();
     });
 
     return unsubscribe;
   }, [user]);
+
+  const handleSaveExpense = async (expense) => {
+    if (isSavingTransaction) {
+      return;
+    }
+
+    setIsSavingTransaction(true);
+
+    if (editingTransactionId) {
+      const updatedTransactionData = {
+        name: expense.name.trim(),
+        amount: expense.amount,
+        category: expense.category,
+      };
+
+      const transactionId = editingTransactionId;
+
+      // Update UI immediately
+      setTransactionList((currentTransactions) =>
+        currentTransactions.map((transaction) =>
+          transaction.id === transactionId
+            ? {
+                ...transaction,
+                ...updatedTransactionData,
+                isPendingSync: true,
+                syncAction: "update",
+              }
+            : transaction,
+        ),
+      );
+
+      // Close form immediately
+      setShowForm(false);
+      setEditingTransactionId(null);
+      setEditingTransaction(null);
+
+      // Local operation is complete
+      setIsSavingTransaction(false);
+
+      // Sync with server in the background
+      void (async () => {
+        try {
+          const token = await getAuthToken();
+
+          if (!token) {
+            throw new Error("Authentication token is missing");
+          }
+
+          const updatedTransaction = await editTransaction(
+            token,
+            transactionId,
+            updatedTransactionData,
+          );
+
+          // Replace local transaction with server transaction
+          setTransactionList((currentTransactions) =>
+            currentTransactions.map((transaction) =>
+              transaction.id === transactionId
+                ? updatedTransaction
+                : transaction,
+            ),
+          );
+
+          console.log("Transaction updated successfully");
+        } catch (error) {
+          console.log(
+            "Transaction updated locally. Sync pending:",
+            error.message,
+          );
+
+          await addPendingTransactionUpdate(
+            user.id,
+            transactionId,
+            updatedTransactionData,
+          );
+        }
+      })();
+
+      return;
+    }
+
+    const today = new Date();
+
+    const transactionDate = `${today.getFullYear()}-${String(
+      today.getMonth() + 1,
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    const localTransaction = {
+      id: `local_${Date.now()}`,
+      name: expense.name.trim(),
+      amount: expense.amount,
+      category: expense.category,
+      date: transactionDate,
+      isPendingSync: true,
+    };
+
+    // Add transaction immediately to UI
+    setTransactionList((currentTransactions) => [
+      ...currentTransactions,
+      localTransaction,
+    ]);
+
+    // Close form immediately
+    setShowForm(false);
+    setEditingTransactionId(null);
+    setEditingTransaction(null);
+
+    // Local operation is complete
+    setIsSavingTransaction(false);
+
+    // Sync with server in the background
+    void (async () => {
+      try {
+        const token = await getAuthToken();
+
+        if (!token) {
+          throw new Error("Authentication token is missing");
+        }
+
+        const newTransaction = await addTransaction(token, {
+          name: expense.name.trim(),
+          amount: expense.amount,
+          category: expense.category,
+          date: transactionDate,
+        });
+
+        // Replace local transaction with server transaction
+        setTransactionList((currentTransactions) =>
+          currentTransactions.map((transaction) =>
+            transaction.id === localTransaction.id
+              ? newTransaction
+              : transaction,
+          ),
+        );
+
+        console.log("Transaction synced successfully");
+      } catch (error) {
+        console.log("Transaction saved locally. Sync pending:", error.message);
+
+        const pendingTransactions = await getPendingTransactions(user.id);
+
+        await savePendingTransactions(user.id, [
+          ...pendingTransactions,
+          localTransaction,
+        ]);
+      }
+    })();
+  };
+
+  const handleSaveBudget = async (newBudget) => {
+    try {
+      const updatedBudget = Number(newBudget);
+
+      if (!updatedBudget || updatedBudget <= 0) {
+        return;
+      }
+
+      // Update UI immediately
+      setBudget(updatedBudget);
+
+      // Cache locally immediately
+      await cacheBudget(user.id, updatedBudget);
+
+      // Close budget screen immediately
+      setShowBudgetForm(false);
+
+      // Try syncing with server in the background
+      void (async () => {
+        try {
+          const token = await getAuthToken();
+
+          if (!token) {
+            throw new Error("Authentication token is missing");
+          }
+
+          const budgetData = await saveBudget(token, updatedBudget);
+
+          const serverBudget = Number(budgetData.budget);
+
+          // Update local state with server value
+          setBudget(serverBudget);
+
+          // Keep cache synchronized
+          await cacheBudget(user.id, serverBudget);
+
+          // Clear pending budget if one exists
+          await clearPendingBudget(user.id);
+
+          console.log("Budget synced successfully");
+        } catch (error) {
+          console.log("Budget saved locally. Sync pending:", error.message);
+
+          await savePendingBudget(user.id, updatedBudget);
+        }
+      })();
+    } catch (error) {
+      console.log("Error saving budget locally:", error.message);
+    }
+  };
+  if (showForm || showBudgetForm) {
+    return (
+      <FormScreen
+        mode={showForm ? "expense" : "budget"}
+        isSaving={isSavingTransaction}
+        editingTransaction={editingTransaction}
+        handleSaveExpense={handleSaveExpense}
+        setShowForm={setShowForm}
+        setEditingTransactionId={setEditingTransactionId}
+        setEditingTransaction={setEditingTransaction}
+        budget={budget}
+        handleSaveBudget={handleSaveBudget}
+        setShowBudgetForm={setShowBudgetForm}
+      />
+    );
+  }
 
   if (isAuthLoading) {
     return (
@@ -596,202 +829,6 @@ function App() {
           <Pressable style={styles.addButton} onPress={() => setShowForm(true)}>
             <Text style={styles.addButtonText}>＋ Add Expense</Text>
           </Pressable>
-          {/* Expense Form */}
-          <ExpenseForm
-            visible={showForm}
-            isSaving={isSavingTransaction}
-            editingTransaction={editingTransaction}
-            remaining={remaining}
-            onSave={async (expense) => {
-              if (isSavingTransaction) {
-                return;
-              }
-
-              setIsSavingTransaction(true);
-
-              if (editingTransactionId) {
-                const updatedTransactionData = {
-                  name: expense.name.trim(),
-                  amount: expense.amount,
-                  category: expense.category,
-                };
-
-                const transactionId = editingTransactionId;
-
-                // Update UI immediately
-                setTransactionList((currentTransactions) =>
-                  currentTransactions.map((transaction) =>
-                    transaction.id === transactionId
-                      ? {
-                          ...transaction,
-                          ...updatedTransactionData,
-                          isPendingSync: true,
-                          syncAction: "update",
-                        }
-                      : transaction,
-                  ),
-                );
-
-                // Close form immediately
-                setShowForm(false);
-                setEditingTransactionId(null);
-                setEditingTransaction(null);
-
-                // Local operation is complete
-                setIsSavingTransaction(false);
-
-                // Sync with server in the background
-                void (async () => {
-                  try {
-                    const token = await getAuthToken();
-
-                    if (!token) {
-                      throw new Error("Authentication token is missing");
-                    }
-
-                    const updatedTransaction = await editTransaction(
-                      token,
-                      transactionId,
-                      updatedTransactionData,
-                    );
-
-                    // Replace local transaction with server transaction
-                    setTransactionList((currentTransactions) =>
-                      currentTransactions.map((transaction) =>
-                        transaction.id === transactionId
-                          ? updatedTransaction
-                          : transaction,
-                      ),
-                    );
-
-                    console.log("Transaction updated successfully");
-                  } catch (error) {
-                    console.log(
-                      "Transaction updated locally. Sync pending:",
-                      error.message,
-                    );
-
-                    await addPendingTransactionUpdate(
-                      user.id,
-                      transactionId,
-                      updatedTransactionData,
-                    );
-                  }
-                })();
-
-                return;
-              }
-
-              const today = new Date();
-
-              const transactionDate = `${today.getFullYear()}-${String(
-                today.getMonth() + 1,
-              ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-
-              const localTransaction = {
-                id: `local_${Date.now()}`,
-                name: expense.name.trim(),
-                amount: expense.amount,
-                category: expense.category,
-                date: transactionDate,
-                isPendingSync: true,
-              };
-
-              // Add transaction immediately to UI
-              setTransactionList((currentTransactions) => [
-                ...currentTransactions,
-                localTransaction,
-              ]);
-
-              // Close form immediately
-              setShowForm(false);
-              setEditingTransactionId(null);
-              setEditingTransaction(null);
-
-              // Local operation is complete
-              setIsSavingTransaction(false);
-
-              // Sync with server in the background
-              void (async () => {
-                try {
-                  const token = await getAuthToken();
-
-                  if (!token) {
-                    throw new Error("Authentication token is missing");
-                  }
-
-                  const newTransaction = await addTransaction(token, {
-                    name: expense.name.trim(),
-                    amount: expense.amount,
-                    category: expense.category,
-                    date: transactionDate,
-                  });
-
-                  // Replace local transaction with server transaction
-                  setTransactionList((currentTransactions) =>
-                    currentTransactions.map((transaction) =>
-                      transaction.id === localTransaction.id
-                        ? newTransaction
-                        : transaction,
-                    ),
-                  );
-
-                  console.log("Transaction synced successfully");
-                } catch (error) {
-                  console.log(
-                    "Transaction saved locally. Sync pending:",
-                    error.message,
-                  );
-
-                  const pendingTransactions = await getPendingTransactions(
-                    user.id,
-                  );
-
-                  await savePendingTransactions(user.id, [
-                    ...pendingTransactions,
-                    localTransaction,
-                  ]);
-                }
-              })();
-            }}
-            onCancel={() => {
-              setShowForm(false);
-              setEditingTransactionId(null);
-              setEditingTransaction(null);
-            }}
-          />
-          {/* Budget Form */}
-          {showBudgetForm && (
-            <BudgetForm
-              budget={budget}
-              totalSpent={totalSpent}
-              onSave={async (newBudget) => {
-                try {
-                  const token = await getAuthToken();
-
-                  if (!token) {
-                    console.log("Authentication token is missing");
-                    return;
-                  }
-
-                  const budgetData = await saveBudget(token, newBudget);
-
-                  const updatedBudget = Number(budgetData.budget);
-
-                  setBudget(updatedBudget);
-
-                  await cacheBudget(user.id, updatedBudget);
-
-                  setShowBudgetForm(false);
-                } catch (error) {
-                  console.log("Error saving budget:", error.message);
-                }
-              }}
-              onCancel={() => {
-                setShowBudgetForm(false);
-              }}
-            />
-          )}
         </>
       )}
     </ScrollView>
