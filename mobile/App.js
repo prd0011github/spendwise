@@ -102,6 +102,9 @@ function App() {
   );
 
   const remaining = budget - totalSpent;
+  const isOverBudget = remaining < 0;
+  const overBudgetAmount = Math.abs(remaining);
+
   const getTransactionsCacheKey = (userId) =>
     `@spendwise_transactions_${userId}`;
 
@@ -544,18 +547,22 @@ function App() {
                     },
                   ]}
                 >
-                  Remaining
+                  {isOverBudget ? "Over Budget" : "Remaining"}
                 </Text>
 
                 <Text
                   style={[
                     styles.summaryStatAmount,
                     {
-                      color: remaining < 0 ? colors.danger : colors.textPrimary,
+                      color: isOverBudget ? colors.danger : colors.textPrimary,
                     },
                   ]}
                 >
-                  ₹{remaining.toLocaleString()}
+                  ₹
+                  {(isOverBudget
+                    ? overBudgetAmount
+                    : remaining
+                  ).toLocaleString()}
                 </Text>
               </View>
             </View>

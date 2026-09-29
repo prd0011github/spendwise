@@ -10,7 +10,12 @@ export default function BudgetProgress({ budget, totalSpent }) {
   }
 
   const percentage = Math.min((totalSpent / budget) * 100, 100);
-  const remaining = Math.max(budget - totalSpent, 0);
+
+  const budgetDifference = budget - totalSpent;
+  const isOverBudget = budgetDifference < 0;
+
+  const remaining = Math.max(budgetDifference, 0);
+  const overBudget = Math.max(-budgetDifference, 0);
 
   const styles = createStyles(colors, spacing, radius);
 
@@ -29,8 +34,10 @@ export default function BudgetProgress({ budget, totalSpent }) {
       <View style={styles.footer}>
         <Text style={styles.spent}>₹{totalSpent.toLocaleString()} spent</Text>
 
-        <Text style={styles.remaining}>
-          ₹{remaining.toLocaleString()} remaining
+        <Text style={[styles.remaining, isOverBudget && styles.overBudget]}>
+          {isOverBudget
+            ? `₹${overBudget.toLocaleString()} over`
+            : `₹${remaining.toLocaleString()} remaining`}
         </Text>
       </View>
     </View>
@@ -94,5 +101,9 @@ const createStyles = (colors, spacing, radius) =>
     remaining: {
       fontSize: 13,
       color: colors.textSecondary,
+    },
+    overBudget: {
+      color: colors.danger,
+      fontWeight: "600",
     },
   });
