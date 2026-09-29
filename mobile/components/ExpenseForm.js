@@ -69,17 +69,6 @@ export default function ExpenseForm({
       return;
     }
 
-    let availableBudget = remaining;
-
-    if (editingTransaction) {
-      availableBudget += editingTransaction.amount;
-    }
-
-    if (amount > availableBudget) {
-      setError("Expense exceeds your remaining budget");
-      return;
-    }
-
     onSave({
       name: expenseName.trim(),
       amount,

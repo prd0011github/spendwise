@@ -15,6 +15,7 @@ import BudgetAlert from "./components/BudgetAlert";
 import BudgetProgress from "./components/BudgetProgress";
 import TransactionSort from "./components/TransactionSort";
 import ModalComponent from "./components/Modal";
+import Analytics from "./components/Analytics";
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import { logout, restoreSession } from "./services/authService";
@@ -59,6 +60,7 @@ function App() {
   const [showRegister, setShowRegister] = useState(false);
 
   const [showMenu, setShowMenu] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const { colors, spacing, typography, radius } = useTheme();
 
@@ -446,333 +448,344 @@ function App() {
         setShowMenu={setShowMenu}
         setShowBudgetForm={setShowBudgetForm}
         handleLogout={handleLogout}
-        onExport={handleExportTransactions}
-        onPrintReport={handlePrintReport}
+        onAnalytics={() => setShowAnalytics(true)}
       />
-      {/* Summary Card */}
-      <View
-        style={[
-          styles.summaryCard,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.summaryLabel,
-            {
-              color: colors.textSecondary,
-            },
-          ]}
-        >
-          THIS MONTH
-        </Text>
-
-        <Text
-          style={[
-            styles.summaryAmount,
-            {
-              color: colors.textPrimary,
-            },
-          ]}
-        >
-          ₹{totalSpent.toLocaleString()}
-        </Text>
-
-        <Text
-          style={[
-            styles.summarySubtext,
-            {
-              color: colors.textSecondary,
-            },
-          ]}
-        >
-          Total spent
-        </Text>
-
-        <View
-          style={[
-            styles.summaryDivider,
-            {
-              backgroundColor: colors.border,
-            },
-          ]}
+      {showAnalytics ? (
+        <Analytics
+          setShowAnalytics={setShowAnalytics}
+          transactions={transactionList}
+          budget={budget}
         />
-
-        <View style={styles.summaryStats}>
-          <View style={styles.summaryStat}>
+      ) : (
+        <>
+          {/* Summary Card */}
+          <View
+            style={[
+              styles.summaryCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
+          >
             <Text
               style={[
-                styles.summaryStatLabel,
+                styles.summaryLabel,
                 {
                   color: colors.textSecondary,
                 },
               ]}
             >
-              Budget
+              THIS MONTH
             </Text>
 
             <Text
               style={[
-                styles.summaryStatAmount,
+                styles.summaryAmount,
                 {
                   color: colors.textPrimary,
                 },
               ]}
             >
-              ₹{budget.toLocaleString()}
+              ₹{totalSpent.toLocaleString()}
             </Text>
-          </View>
 
-          <View style={[styles.summaryStat, styles.summaryColumnRight]}>
             <Text
               style={[
-                styles.summaryStatLabel,
+                styles.summarySubtext,
                 {
                   color: colors.textSecondary,
                 },
               ]}
             >
-              Remaining
+              Total spent
             </Text>
 
-            <Text
+            <View
               style={[
-                styles.summaryStatAmount,
+                styles.summaryDivider,
                 {
-                  color: remaining < 0 ? colors.danger : colors.textPrimary,
+                  backgroundColor: colors.border,
                 },
               ]}
-            >
-              ₹{remaining.toLocaleString()}
-            </Text>
+            />
+
+            <View style={styles.summaryStats}>
+              <View style={styles.summaryStat}>
+                <Text
+                  style={[
+                    styles.summaryStatLabel,
+                    {
+                      color: colors.textSecondary,
+                    },
+                  ]}
+                >
+                  Budget
+                </Text>
+
+                <Text
+                  style={[
+                    styles.summaryStatAmount,
+                    {
+                      color: colors.textPrimary,
+                    },
+                  ]}
+                >
+                  ₹{budget.toLocaleString()}
+                </Text>
+              </View>
+
+              <View style={[styles.summaryStat, styles.summaryColumnRight]}>
+                <Text
+                  style={[
+                    styles.summaryStatLabel,
+                    {
+                      color: colors.textSecondary,
+                    },
+                  ]}
+                >
+                  Remaining
+                </Text>
+
+                <Text
+                  style={[
+                    styles.summaryStatAmount,
+                    {
+                      color: remaining < 0 ? colors.danger : colors.textPrimary,
+                    },
+                  ]}
+                >
+                  ₹{remaining.toLocaleString()}
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
-      <BudgetAlert budget={budget} totalSpent={totalSpent} />
-      <BudgetProgress budget={budget} totalSpent={totalSpent} />
-      <TransactionFilter
-        searchText={searchText}
-        setSearchText={setSearchText}
-        selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
-      />
-      <TransactionSort
-        selectedSort={selectedSort}
-        setSelectedSort={setSelectedSort}
-      />
-      {/* Recent Transactions */}
-      <TransactionItem
-        displayedTransactions={recentTransactions}
-        totalDisplayedTransactions={displayedTransactions.length}
-        showAllTransactions={showAllTransactions}
-        setShowAllTransactions={setShowAllTransactions}
-        setTransactionList={setTransactionList}
-        setEditingTransactionId={setEditingTransactionId}
-        setEditingTransaction={setEditingTransaction}
-        setShowForm={setShowForm}
-      />
-      <TopSpending transactions={transactionList} />
-      <CategorySummary transactions={transactionList} />
-      <MonthlySummary transactions={transactionList} />
-      <Pressable style={styles.addButton} onPress={() => setShowForm(true)}>
-        <Text style={styles.addButtonText}>＋ Add Expense</Text>
-      </Pressable>
-      {/* Expense Form */}
-      <ExpenseForm
-        visible={showForm}
-        isSaving={isSavingTransaction}
-        editingTransaction={editingTransaction}
-        remaining={remaining}
-        onSave={async (expense) => {
-          if (isSavingTransaction) {
-            return;
-          }
+          <BudgetAlert budget={budget} totalSpent={totalSpent} />
+          <BudgetProgress budget={budget} totalSpent={totalSpent} />
+          <TransactionFilter
+            searchText={searchText}
+            setSearchText={setSearchText}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+          />
+          <TransactionSort
+            selectedSort={selectedSort}
+            setSelectedSort={setSelectedSort}
+          />
+          {/* Recent Transactions */}
+          <TransactionItem
+            displayedTransactions={recentTransactions}
+            totalDisplayedTransactions={displayedTransactions.length}
+            showAllTransactions={showAllTransactions}
+            setShowAllTransactions={setShowAllTransactions}
+            setTransactionList={setTransactionList}
+            setEditingTransactionId={setEditingTransactionId}
+            setEditingTransaction={setEditingTransaction}
+            setShowForm={setShowForm}
+          />
+          <TopSpending transactions={transactionList} />
+          <CategorySummary transactions={transactionList} />
+          <MonthlySummary transactions={transactionList} />
+          <Pressable style={styles.addButton} onPress={() => setShowForm(true)}>
+            <Text style={styles.addButtonText}>＋ Add Expense</Text>
+          </Pressable>
+          {/* Expense Form */}
+          <ExpenseForm
+            visible={showForm}
+            isSaving={isSavingTransaction}
+            editingTransaction={editingTransaction}
+            remaining={remaining}
+            onSave={async (expense) => {
+              if (isSavingTransaction) {
+                return;
+              }
 
-          setIsSavingTransaction(true);
+              setIsSavingTransaction(true);
 
-          if (editingTransactionId) {
-            const updatedTransactionData = {
-              name: expense.name.trim(),
-              amount: expense.amount,
-              category: expense.category,
-            };
+              if (editingTransactionId) {
+                const updatedTransactionData = {
+                  name: expense.name.trim(),
+                  amount: expense.amount,
+                  category: expense.category,
+                };
 
-            const transactionId = editingTransactionId;
+                const transactionId = editingTransactionId;
 
-            // Update UI immediately
-            setTransactionList((currentTransactions) =>
-              currentTransactions.map((transaction) =>
-                transaction.id === transactionId
-                  ? {
-                      ...transaction,
-                      ...updatedTransactionData,
-                      isPendingSync: true,
-                      syncAction: "update",
-                    }
-                  : transaction,
-              ),
-            );
-
-            // Close form immediately
-            setShowForm(false);
-            setEditingTransactionId(null);
-            setEditingTransaction(null);
-
-            // Local operation is complete
-            setIsSavingTransaction(false);
-
-            // Sync with server in the background
-            void (async () => {
-              try {
-                const token = await getAuthToken();
-
-                if (!token) {
-                  throw new Error("Authentication token is missing");
-                }
-
-                const updatedTransaction = await editTransaction(
-                  token,
-                  transactionId,
-                  updatedTransactionData,
-                );
-
-                // Replace local transaction with server transaction
+                // Update UI immediately
                 setTransactionList((currentTransactions) =>
                   currentTransactions.map((transaction) =>
                     transaction.id === transactionId
-                      ? updatedTransaction
+                      ? {
+                          ...transaction,
+                          ...updatedTransactionData,
+                          isPendingSync: true,
+                          syncAction: "update",
+                        }
                       : transaction,
                   ),
                 );
 
-                console.log("Transaction updated successfully");
-              } catch (error) {
-                console.log(
-                  "Transaction updated locally. Sync pending:",
-                  error.message,
-                );
+                // Close form immediately
+                setShowForm(false);
+                setEditingTransactionId(null);
+                setEditingTransaction(null);
 
-                await addPendingTransactionUpdate(
-                  user.id,
-                  transactionId,
-                  updatedTransactionData,
-                );
-              }
-            })();
+                // Local operation is complete
+                setIsSavingTransaction(false);
 
-            return;
-          }
+                // Sync with server in the background
+                void (async () => {
+                  try {
+                    const token = await getAuthToken();
 
-          const today = new Date();
+                    if (!token) {
+                      throw new Error("Authentication token is missing");
+                    }
 
-          const transactionDate = `${today.getFullYear()}-${String(
-            today.getMonth() + 1,
-          ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+                    const updatedTransaction = await editTransaction(
+                      token,
+                      transactionId,
+                      updatedTransactionData,
+                    );
 
-          const localTransaction = {
-            id: `local_${Date.now()}`,
-            name: expense.name.trim(),
-            amount: expense.amount,
-            category: expense.category,
-            date: transactionDate,
-            isPendingSync: true,
-          };
+                    // Replace local transaction with server transaction
+                    setTransactionList((currentTransactions) =>
+                      currentTransactions.map((transaction) =>
+                        transaction.id === transactionId
+                          ? updatedTransaction
+                          : transaction,
+                      ),
+                    );
 
-          // Add transaction immediately to UI
-          setTransactionList((currentTransactions) => [
-            ...currentTransactions,
-            localTransaction,
-          ]);
+                    console.log("Transaction updated successfully");
+                  } catch (error) {
+                    console.log(
+                      "Transaction updated locally. Sync pending:",
+                      error.message,
+                    );
 
-          // Close form immediately
-          setShowForm(false);
-          setEditingTransactionId(null);
-          setEditingTransaction(null);
+                    await addPendingTransactionUpdate(
+                      user.id,
+                      transactionId,
+                      updatedTransactionData,
+                    );
+                  }
+                })();
 
-          // Local operation is complete
-          setIsSavingTransaction(false);
-
-          // Sync with server in the background
-          void (async () => {
-            try {
-              const token = await getAuthToken();
-
-              if (!token) {
-                throw new Error("Authentication token is missing");
+                return;
               }
 
-              const newTransaction = await addTransaction(token, {
+              const today = new Date();
+
+              const transactionDate = `${today.getFullYear()}-${String(
+                today.getMonth() + 1,
+              ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+              const localTransaction = {
+                id: `local_${Date.now()}`,
                 name: expense.name.trim(),
                 amount: expense.amount,
                 category: expense.category,
                 date: transactionDate,
-              });
+                isPendingSync: true,
+              };
 
-              // Replace local transaction with server transaction
-              setTransactionList((currentTransactions) =>
-                currentTransactions.map((transaction) =>
-                  transaction.id === localTransaction.id
-                    ? newTransaction
-                    : transaction,
-                ),
-              );
-
-              console.log("Transaction synced successfully");
-            } catch (error) {
-              console.log(
-                "Transaction saved locally. Sync pending:",
-                error.message,
-              );
-
-              const pendingTransactions = await getPendingTransactions(user.id);
-
-              await savePendingTransactions(user.id, [
-                ...pendingTransactions,
+              // Add transaction immediately to UI
+              setTransactionList((currentTransactions) => [
+                ...currentTransactions,
                 localTransaction,
               ]);
-            }
-          })();
-        }}
-        onCancel={() => {
-          setShowForm(false);
-          setEditingTransactionId(null);
-          setEditingTransaction(null);
-        }}
-      />
-      {/* Budget Form */}
-      {showBudgetForm && (
-        <BudgetForm
-          budget={budget}
-          totalSpent={totalSpent}
-          onSave={async (newBudget) => {
-            try {
-              const token = await getAuthToken();
 
-              if (!token) {
-                console.log("Authentication token is missing");
-                return;
-              }
+              // Close form immediately
+              setShowForm(false);
+              setEditingTransactionId(null);
+              setEditingTransaction(null);
 
-              const budgetData = await saveBudget(token, newBudget);
+              // Local operation is complete
+              setIsSavingTransaction(false);
 
-              const updatedBudget = Number(budgetData.budget);
+              // Sync with server in the background
+              void (async () => {
+                try {
+                  const token = await getAuthToken();
 
-              setBudget(updatedBudget);
+                  if (!token) {
+                    throw new Error("Authentication token is missing");
+                  }
 
-              await cacheBudget(user.id, updatedBudget);
+                  const newTransaction = await addTransaction(token, {
+                    name: expense.name.trim(),
+                    amount: expense.amount,
+                    category: expense.category,
+                    date: transactionDate,
+                  });
 
-              setShowBudgetForm(false);
-            } catch (error) {
-              console.log("Error saving budget:", error.message);
-            }
-          }}
-          onCancel={() => {
-            setShowBudgetForm(false);
-          }}
-        />
+                  // Replace local transaction with server transaction
+                  setTransactionList((currentTransactions) =>
+                    currentTransactions.map((transaction) =>
+                      transaction.id === localTransaction.id
+                        ? newTransaction
+                        : transaction,
+                    ),
+                  );
+
+                  console.log("Transaction synced successfully");
+                } catch (error) {
+                  console.log(
+                    "Transaction saved locally. Sync pending:",
+                    error.message,
+                  );
+
+                  const pendingTransactions = await getPendingTransactions(
+                    user.id,
+                  );
+
+                  await savePendingTransactions(user.id, [
+                    ...pendingTransactions,
+                    localTransaction,
+                  ]);
+                }
+              })();
+            }}
+            onCancel={() => {
+              setShowForm(false);
+              setEditingTransactionId(null);
+              setEditingTransaction(null);
+            }}
+          />
+          {/* Budget Form */}
+          {showBudgetForm && (
+            <BudgetForm
+              budget={budget}
+              totalSpent={totalSpent}
+              onSave={async (newBudget) => {
+                try {
+                  const token = await getAuthToken();
+
+                  if (!token) {
+                    console.log("Authentication token is missing");
+                    return;
+                  }
+
+                  const budgetData = await saveBudget(token, newBudget);
+
+                  const updatedBudget = Number(budgetData.budget);
+
+                  setBudget(updatedBudget);
+
+                  await cacheBudget(user.id, updatedBudget);
+
+                  setShowBudgetForm(false);
+                } catch (error) {
+                  console.log("Error saving budget:", error.message);
+                }
+              }}
+              onCancel={() => {
+                setShowBudgetForm(false);
+              }}
+            />
+          )}
+        </>
       )}
     </ScrollView>
   );

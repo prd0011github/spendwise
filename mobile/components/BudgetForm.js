@@ -23,11 +23,6 @@ export default function BudgetForm({ budget, totalSpent, onSave, onCancel }) {
       return;
     }
 
-    if (newBudget < totalSpent) {
-      setBudgetError("Budget cannot be less than your total spent");
-      return;
-    }
-
     onSave(newBudget);
   };
 

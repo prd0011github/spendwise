@@ -10,6 +10,7 @@ export default function ModalComponent({
   handleLogout,
   onExport,
   onPrintReport,
+  onAnalytics,
 }) {
   const { colors, themeMode, updateTheme } = useTheme();
 
@@ -46,6 +47,21 @@ export default function ModalComponent({
             >
               SpendWise
             </Text>
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setShowMenu(false);
+                onAnalytics();
+              }}
+            >
+              <Text style={styles.menuIcon}>📊</Text>
+
+              <Text
+                style={[styles.menuItemText, { color: colors.textPrimary }]}
+              >
+                Analytics
+              </Text>
+            </Pressable>
 
             <Pressable
               style={styles.menuItem}
