@@ -1,9 +1,11 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useTheme } from "../context/ThemeContext";
+import { useCurrency } from "../context/CurrencyContext";
 
 export default function BudgetProgress({ budget, totalSpent }) {
   const { colors, spacing, radius } = useTheme();
+  const { formatAmount } = useCurrency();
 
   if (budget <= 0) {
     return null;
@@ -32,12 +34,12 @@ export default function BudgetProgress({ budget, totalSpent }) {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.spent}>₹{totalSpent.toLocaleString()} spent</Text>
+        <Text style={styles.spent}>{formatAmount(totalSpent)} spent</Text>
 
         <Text style={[styles.remaining, isOverBudget && styles.overBudget]}>
           {isOverBudget
-            ? `₹${overBudget.toLocaleString()} over`
-            : `₹${remaining.toLocaleString()} remaining`}
+            ? `${formatAmount(overBudget)} over`
+            : `${formatAmount(remaining)} remaining`}
         </Text>
       </View>
     </View>

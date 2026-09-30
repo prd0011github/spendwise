@@ -1,9 +1,11 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useTheme } from "../context/ThemeContext";
+import { useCurrency } from "../context/CurrencyContext";
 
 export default function MonthlySummary({ transactions }) {
   const { colors, spacing, radius } = useTheme();
+  const { formatAmount } = useCurrency();
 
   const styles = createStyles(colors, spacing, radius);
 
@@ -98,7 +100,7 @@ export default function MonthlySummary({ transactions }) {
         <Text style={styles.month}>{formatMonth(currentMonth.month)}</Text>
 
         <Text style={styles.currentAmount}>
-          ₹{currentMonth.amount.toLocaleString()}
+          {formatAmount(currentMonth.amount)}
         </Text>
 
         <Text style={[styles.comparison, comparisonStyle]}>
@@ -110,7 +112,7 @@ export default function MonthlySummary({ transactions }) {
         <View key={item.month} style={styles.monthRow}>
           <Text style={styles.month}>{formatMonth(item.month)}</Text>
 
-          <Text style={styles.amount}>₹{item.amount.toLocaleString()}</Text>
+          <Text style={styles.amount}>{formatAmount(item.amount)}</Text>
         </View>
       ))}
     </View>

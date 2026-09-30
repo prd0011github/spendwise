@@ -4,7 +4,7 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString();
 };
 
-export const printTransactionsReport = async (transactions) => {
+export const printTransactionsReport = async (transactions, formatAmount) => {
   if (!transactions || transactions.length === 0) {
     throw new Error("No transactions available to print");
   }
@@ -21,7 +21,7 @@ export const printTransactionsReport = async (transactions) => {
           <td>${formatDate(transaction.date)}</td>
           <td>${transaction.name}</td>
           <td>${transaction.category || "Other"}</td>
-          <td class="amount">₹${Number(transaction.amount).toFixed(2)}</td>
+          <td class="amount">${formatAmount(Number(transaction.amount))}</td>
         </tr>
       `,
     )
@@ -121,7 +121,7 @@ export const printTransactionsReport = async (transactions) => {
 
           <div class="summary-card">
             <div class="label">Total Expenses</div>
-            <div class="value">₹${totalAmount.toFixed(2)}</div>
+            <div class="value">${formatAmount(totalAmount)}</div>
           </div>
         </div>
 
@@ -140,7 +140,7 @@ export const printTransactionsReport = async (transactions) => {
 
             <tr class="total-row">
               <td colspan="3">TOTAL</td>
-              <td class="amount">₹${totalAmount.toFixed(2)}</td>
+              <td class="amount">${formatAmount(totalAmount)}</td>
             </tr>
           </tbody>
         </table>

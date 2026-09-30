@@ -2,9 +2,11 @@ import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "../context/ThemeContext";
+import { useCurrency } from "../context/CurrencyContext";
 
 const AnalyticsInsights = ({ transactions = [], budget = 0 }) => {
   const { colors, spacing, typography, radius } = useTheme();
+  const { formatAmount } = useCurrency();
 
   const insights = useMemo(() => {
     if (transactions.length === 0) {
@@ -63,9 +65,9 @@ const AnalyticsInsights = ({ transactions = [], budget = 0 }) => {
         generatedInsights.push({
           type: "danger",
           title: "Budget exceeded",
-          message: `You've exceeded your monthly budget by ₹${(
-            totalExpense - budgetAmount
-          ).toFixed(2)}.`,
+          message: `You've exceeded your monthly budget by ${formatAmount(
+            totalExpense - budgetAmount,
+          )}.`,
         });
       } else if (budgetPercentage >= 90) {
         generatedInsights.push({
@@ -73,7 +75,7 @@ const AnalyticsInsights = ({ transactions = [], budget = 0 }) => {
           title: "You're close to your budget",
           message: `You've used ${budgetPercentage.toFixed(
             0,
-          )}% of your monthly budget. ₹${remainingBudget.toFixed(2)} remains.`,
+          )}% of your monthly budget. ${formatAmount(remainingBudget)} remains.`,
         });
       } else {
         generatedInsights.push({
@@ -81,7 +83,7 @@ const AnalyticsInsights = ({ transactions = [], budget = 0 }) => {
           title: "You're within budget",
           message: `You've used ${budgetPercentage.toFixed(
             0,
-          )}% of your monthly budget. ₹${remainingBudget.toFixed(2)} remains.`,
+          )}% of your monthly budget. ${formatAmount(remainingBudget)} remains.`,
         });
       }
     }

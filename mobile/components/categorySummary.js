@@ -2,9 +2,11 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { getCategoryIcon } from "../utils/categoryUtils";
 import { useTheme } from "../context/ThemeContext";
+import { useCurrency } from "../context/CurrencyContext";
 
 export default function CategorySummary({ transactions }) {
   const { colors, spacing, radius } = useTheme();
+  const { formatAmount } = useCurrency();
 
   const styles = createStyles(colors, spacing, radius);
 
@@ -61,9 +63,7 @@ export default function CategorySummary({ transactions }) {
               </View>
 
               <View style={styles.amountContainer}>
-                <Text style={styles.amount}>
-                  ₹{item.amount.toLocaleString()}
-                </Text>
+                <Text style={styles.amount}>{formatAmount(item.amount)}</Text>
 
                 <Text style={styles.percentage}>{item.percentage}%</Text>
               </View>

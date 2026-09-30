@@ -1,7 +1,9 @@
 import { Pressable, Modal, StyleSheet, Text, View } from "react-native";
 
 import React, { useState } from "react";
+import CurrencySelector from "../components/CurrencySelector";
 import { useTheme } from "../context/ThemeContext";
+import { useCurrency } from "../context/CurrencyContext";
 
 export default function ModalComponent({
   showMenu,
@@ -13,8 +15,10 @@ export default function ModalComponent({
   onAnalytics,
 }) {
   const { colors, themeMode, updateTheme } = useTheme();
+  const { setCurrency } = useCurrency();
 
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   return (
     <>
@@ -105,6 +109,21 @@ export default function ModalComponent({
                 style={[styles.menuItemText, { color: colors.textPrimary }]}
               >
                 Budget Settings
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setShowMenu(false);
+                setShowCurrencyModal(true);
+              }}
+            >
+              <Text style={styles.menuIcon}>💱</Text>
+
+              <Text
+                style={[styles.menuItemText, { color: colors.textPrimary }]}
+              >
+                Currency
               </Text>
             </Pressable>
 
@@ -265,6 +284,66 @@ export default function ModalComponent({
           </Pressable>
         </Pressable>
       </Modal>
+      {/* currency Modal */}
+      <Modal
+        visible={showCurrencyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCurrencyModal(false)}
+      >
+        <Pressable
+          style={styles.currencyOverlay}
+          onPress={() => setShowCurrencyModal(false)}
+        >
+          <Pressable
+            style={[
+              styles.currencyContainer,
+              {
+                backgroundColor: colors.surface,
+              },
+            ]}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <View style={styles.currencyHeader}>
+              <Text
+                style={[
+                  styles.currencyTitle,
+                  {
+                    color: colors.textPrimary,
+                  },
+                ]}
+              >
+                Choose Currency
+              </Text>
+
+              <Pressable
+                onPress={() => setShowCurrencyModal(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close currency selector"
+              >
+                <Text
+                  style={[
+                    styles.currencyClose,
+                    {
+                      color: colors.textSecondary,
+                    },
+                  ]}
+                >
+                  ✕
+                </Text>
+              </Pressable>
+            </View>
+
+            <CurrencySelector
+              compact
+              onSelect={async (currencyCode) => {
+                await setCurrency(currencyCode);
+                setShowCurrencyModal(false);
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </>
   );
 }
@@ -361,5 +440,46 @@ const styles = StyleSheet.create({
   themeCheck: {
     fontSize: 18,
     fontWeight: "700",
+  },
+
+  // Currency Moda Style
+  currencyOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  currencyContainer: {
+    width: "100%",
+    maxWidth: 380,
+    height: "75%",
+    borderRadius: 16,
+    padding: 16,
+    elevation: 8,
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+
+  currencyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+
+  currencyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  currencyClose: {
+    fontSize: 20,
+    padding: 4,
   },
 });

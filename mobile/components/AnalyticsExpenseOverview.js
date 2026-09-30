@@ -2,9 +2,11 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "../context/ThemeContext";
+import { useCurrency } from "../context/CurrencyContext";
 
 const AnalyticsExpenseOverview = ({ transactions }) => {
   const { colors, spacing, typography, radius } = useTheme();
+  const { formatAmount } = useCurrency();
 
   const categoryTotals = {};
 
@@ -51,7 +53,7 @@ const AnalyticsExpenseOverview = ({ transactions }) => {
               <Text style={styles.summaryLabel}>Expenses</Text>
 
               <Text style={styles.summaryAmount}>
-                ₹{totalExpenses.toFixed(2)}
+                {formatAmount(totalExpenses)}
               </Text>
             </View>
           </View>
@@ -68,7 +70,7 @@ const AnalyticsExpenseOverview = ({ transactions }) => {
 
                   <View style={styles.categoryAmountContainer}>
                     <Text style={styles.categoryAmount}>
-                      ₹{item.amount.toFixed(2)}
+                      {formatAmount(item.amount)}
                     </Text>
 
                     <Text style={styles.categoryPercentage}>

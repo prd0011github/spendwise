@@ -2,8 +2,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import React, { useEffect, useState } from "react";
 import NetInfo from "@react-native-community/netinfo";
+
 import { exportTransactionsToCsv } from "./services/exportService";
 import { printTransactionsReport } from "./services/printService";
+
 import TransactionItem from "./components/TransactionItem";
 import CategorySummary from "./components/categorySummary";
 import TopSpending from "./components/TopSpending";
@@ -14,9 +16,12 @@ import BudgetProgress from "./components/BudgetProgress";
 import TransactionSort from "./components/TransactionSort";
 import ModalComponent from "./components/Modal";
 import Analytics from "./components/Analytics";
+
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import FormScreen from "./screens/FormScreen";
+import CurrencySetupScreen from "./screens/CurrencySetupScreen";
+
 import { logout, restoreSession } from "./services/authService";
 import {
   fetchTransactions,
@@ -37,7 +42,9 @@ import {
   clearPendingBudget,
   syncPendingBudget,
 } from "./services/budgetService";
+
 import { ThemeProvider } from "./context/ThemeContext";
+import { CurrencyProvider, useCurrency } from "./context/CurrencyContext";
 import { useTheme } from "./context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -63,8 +70,15 @@ function App() {
 
   const [showMenu, setShowMenu] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showCurrency, setShowCurrency] = useState(false);
 
   const { colors, spacing, typography, radius } = useTheme();
+  const {
+    loadUserCurrency,
+    isCurrencySetupCompleted,
+    completeCurrencySetup,
+    formatAmount,
+  } = useCurrency();
 
   const styles = createStyles(colors, spacing, typography, radius);
 
@@ -92,7 +106,7 @@ function App() {
 
   const handlePrintReport = async () => {
     try {
-      await printTransactionsReport(transactionList);
+      await printTransactionsReport(transactionList, formatAmount);
     } catch (error) {
       console.log("Print report failed:", error.message);
     }
@@ -209,6 +223,28 @@ function App() {
 
     saveTransactions();
   }, [transactionList, isLoaded, user]);
+
+  // currency setup
+  useEffect(() => {
+    if (!user) {
+      setShowCurrency(false);
+      return;
+    }
+
+    const checkCurrencySetup = async () => {
+      try {
+        await loadUserCurrency(user.id);
+
+        const isCompleted = await isCurrencySetupCompleted(user.id);
+
+        setShowCurrency(!isCompleted);
+      } catch (error) {
+        console.log("Failed to check currency setup:", error.message);
+      }
+    };
+
+    void checkCurrencySetup();
+  }, [user]);
 
   // Logout handler
   const handleLogout = async () => {
@@ -587,6 +623,17 @@ function App() {
     );
   }
 
+  if (showCurrency) {
+    return (
+      <CurrencySetupScreen
+        onComplete={async () => {
+          await completeCurrencySetup(user.id);
+          setShowCurrency(false);
+        }}
+      />
+    );
+  }
+
   if (isAuthLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -681,6 +728,8 @@ function App() {
       {/*three dot modal */}
       <ModalComponent
         showMenu={showMenu}
+        onExport={handleExportTransactions}
+        onPrintReport={handlePrintReport}
         setShowMenu={setShowMenu}
         setShowBudgetForm={setShowBudgetForm}
         handleLogout={handleLogout}
@@ -723,7 +772,7 @@ function App() {
                 },
               ]}
             >
-              ₹{totalSpent.toLocaleString()}
+              {formatAmount(totalSpent)}
             </Text>
 
             <Text
@@ -767,7 +816,7 @@ function App() {
                     },
                   ]}
                 >
-                  ₹{budget.toLocaleString()}
+                  {formatAmount(budget)}
                 </Text>
               </View>
 
@@ -791,11 +840,7 @@ function App() {
                     },
                   ]}
                 >
-                  ₹
-                  {(isOverBudget
-                    ? overBudgetAmount
-                    : remaining
-                  ).toLocaleString()}
+                  {formatAmount(isOverBudget ? overBudgetAmount : remaining)}
                 </Text>
               </View>
             </View>
@@ -838,7 +883,9 @@ function App() {
 export default function AppWithTheme() {
   return (
     <ThemeProvider>
-      <App />
+      <CurrencyProvider>
+        <App />
+      </CurrencyProvider>
     </ThemeProvider>
   );
 }

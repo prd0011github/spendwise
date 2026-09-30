@@ -2,9 +2,11 @@ import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { useTheme } from "../context/ThemeContext";
+import { useCurrency } from "../context/CurrencyContext";
 
 const AnalyticsSpendingFlow = ({ transactions }) => {
   const { colors, spacing, typography, radius } = useTheme();
+  const { formatAmount } = useCurrency();
 
   const weeklySpending = useMemo(() => {
     const weeks = [
@@ -45,7 +47,7 @@ const AnalyticsSpendingFlow = ({ transactions }) => {
           <Text style={styles.subtitle}>Weekly spending</Text>
         </View>
 
-        <Text style={styles.totalAmount}>₹{totalSpending.toFixed(0)}</Text>
+        <Text style={styles.totalAmount}>{formatAmount(totalSpending)}</Text>
       </View>
 
       {maxAmount === 0 ? (
@@ -66,7 +68,9 @@ const AnalyticsSpendingFlow = ({ transactions }) => {
             return (
               <View key={week.label} style={styles.barColumn}>
                 <Text style={styles.barAmount}>
-                  {week.amount > 0 ? `₹${week.amount.toFixed(0)}` : "₹0"}
+                  {week.amount > 0
+                    ? `${formatAmount(week.amount)}`
+                    : formatAmount("0")}
                 </Text>
 
                 <View style={styles.barContainer}>

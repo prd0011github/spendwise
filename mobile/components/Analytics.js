@@ -5,6 +5,7 @@ import AnalyticsSpendingFlow from "../components/AnalyticsSpendingFlow";
 import AnalyticsInsights from "../components/AnalyticsInsights";
 
 import { useTheme } from "../context/ThemeContext";
+import { useCurrency } from "../context/CurrencyContext";
 
 const getMonthYear = (date) => {
   return date.toLocaleString("default", {
@@ -19,6 +20,7 @@ export default function Analytics({
   budget = 0,
 }) {
   const { colors, spacing, typography, radius } = useTheme();
+  const { formatAmount } = useCurrency();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -108,7 +110,7 @@ export default function Analytics({
           <Text style={styles.summaryLabel}>EXPENSE</Text>
 
           <Text style={[styles.summaryValue, { color: colors.danger }]}>
-            ₹{totalExpense.toFixed(2)}
+            {formatAmount(totalExpense)}
           </Text>
         </View>
 
@@ -118,7 +120,7 @@ export default function Analytics({
           <Text style={styles.summaryLabel}>BUDGET</Text>
 
           <Text style={[styles.summaryValue, { color: colors.primary }]}>
-            ₹{Number(budget || 0).toFixed(2)}
+            {formatAmount(Number(budget || 0))}
           </Text>
         </View>
 
@@ -137,7 +139,7 @@ export default function Analytics({
               },
             ]}
           >
-            ₹{(isOverBudget ? overBudgetAmount : remainingBudget).toFixed(2)}
+            {formatAmount(isOverBudget ? overBudgetAmount : remainingBudget)}
           </Text>
         </View>
       </View>

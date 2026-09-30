@@ -7,6 +7,7 @@ import {
 } from "../services/transactionService";
 import { getAuthToken, getAuthUser } from "../services/authStorage";
 import { useTheme } from "../context/ThemeContext";
+import { useCurrency } from "../context/CurrencyContext";
 
 export default function TransactionItem({
   displayedTransactions,
@@ -19,6 +20,7 @@ export default function TransactionItem({
   setShowForm,
 }) {
   const { colors, spacing, radius } = useTheme();
+  const { formatAmount } = useCurrency();
 
   const styles = createStyles(colors, spacing, radius);
 
@@ -118,7 +120,7 @@ export default function TransactionItem({
             </View>
 
             <Text style={styles.expense}>
-              -₹{transaction.amount.toLocaleString()}
+              -{formatAmount(transaction.amount)}
             </Text>
           </Pressable>
         ))
