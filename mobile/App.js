@@ -16,6 +16,7 @@ import BudgetProgress from "./components/BudgetProgress";
 import TransactionSort from "./components/TransactionSort";
 import ModalComponent from "./components/Modal";
 import Analytics from "./components/Analytics";
+import SyncStatusIndicator from "./components/SyncStatusIndicator";
 
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
@@ -71,6 +72,8 @@ function App() {
   const [showMenu, setShowMenu] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showCurrency, setShowCurrency] = useState(false);
+
+  const [syncStatus, setSyncStatus] = useState("synced");
 
   const { colors, spacing, typography, radius } = useTheme();
   const {
@@ -388,17 +391,28 @@ function App() {
         return;
       }
 
-      await syncPendingTransactionsNow();
+      try {
+        setSyncStatus("syncing");
 
-      const syncedBudget = await syncPendingBudget(user.id, token);
+        await syncPendingTransactionsNow();
 
-      if (syncedBudget !== null) {
-        setBudget(syncedBudget);
+        const syncedBudget = await syncPendingBudget(user.id, token);
+
+        if (syncedBudget !== null) {
+          setBudget(syncedBudget);
+        }
+
+        setSyncStatus("synced");
+      } catch (error) {
+        console.log("Sync failed:", error.message);
+
+        setSyncStatus("pending");
       }
     };
 
     const unsubscribe = NetInfo.addEventListener((state) => {
       if (!state.isConnected) {
+        setSyncStatus("pending");
         return;
       }
 
@@ -725,6 +739,7 @@ function App() {
           </Text>
         </Pressable>
       </View>
+      <SyncStatusIndicator status={syncStatus} />
       {/*three dot modal */}
       <ModalComponent
         showMenu={showMenu}
