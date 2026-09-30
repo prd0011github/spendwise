@@ -22,6 +22,7 @@ import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import FormScreen from "./screens/FormScreen";
 import CurrencySetupScreen from "./screens/CurrencySetupScreen";
+import SettingsScreen from "./screens/SettingsScreen";
 
 import { logout, restoreSession } from "./services/authService";
 import {
@@ -72,6 +73,9 @@ function App() {
   const [showMenu, setShowMenu] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showCurrency, setShowCurrency] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showCurrencyFromSetting, setCurrencyFromSetting] = useState(false);
+  const [showThemeFromSetting, setShowThemeFromSetting] = useState(false);
 
   const [syncStatus, setSyncStatus] = useState("synced");
 
@@ -648,6 +652,22 @@ function App() {
     );
   }
 
+  if (showSettings) {
+    return (
+      <SettingsScreen
+        onBack={() => setShowSettings(false)}
+        onCurrencyPress={() => {
+          setShowSettings(false);
+          setCurrencyFromSetting(true);
+        }}
+        onThemePress={() => {
+          setShowSettings(false);
+          setShowThemeFromSetting(true);
+        }}
+      />
+    );
+  }
+
   if (isAuthLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -749,6 +769,11 @@ function App() {
         setShowBudgetForm={setShowBudgetForm}
         handleLogout={handleLogout}
         onAnalytics={() => setShowAnalytics(true)}
+        onSettings={() => setShowSettings(true)}
+        showCurrencyFromSetting={showCurrencyFromSetting}
+        setCurrencyFromSetting={setCurrencyFromSetting}
+        setShowThemeFromSetting={setShowThemeFromSetting}
+        showThemeFromSetting={showThemeFromSetting}
       />
       {showAnalytics ? (
         <Analytics

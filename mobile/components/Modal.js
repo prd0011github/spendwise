@@ -13,6 +13,11 @@ export default function ModalComponent({
   onExport,
   onPrintReport,
   onAnalytics,
+  onSettings,
+  showCurrencyFromSetting,
+  setCurrencyFromSetting,
+  showThemeFromSetting,
+  setShowThemeFromSetting,
 }) {
   const { colors, themeMode, updateTheme } = useTheme();
   const { setCurrency } = useCurrency();
@@ -111,6 +116,27 @@ export default function ModalComponent({
                 Budget Settings
               </Text>
             </Pressable>
+            {/* setting button */}
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setShowMenu(false);
+                onSettings();
+              }}
+            >
+              <Text style={styles.menuIcon}>⚙️</Text>
+
+              <Text
+                style={[
+                  styles.menuItemText,
+                  {
+                    color: colors.textPrimary,
+                  },
+                ]}
+              >
+                Settings
+              </Text>
+            </Pressable>
             <Pressable
               style={styles.menuItem}
               onPress={() => {
@@ -163,7 +189,7 @@ export default function ModalComponent({
         </Pressable>
       </Modal>
       <Modal
-        visible={showThemeModal}
+        visible={showThemeModal || showThemeFromSetting}
         transparent
         animationType="fade"
         onRequestClose={() => setShowThemeModal(false)}
@@ -202,6 +228,7 @@ export default function ModalComponent({
               onPress={async () => {
                 await updateTheme("light");
                 setShowThemeModal(false);
+                setShowThemeFromSetting(false);
               }}
             >
               <Text
@@ -232,6 +259,7 @@ export default function ModalComponent({
               onPress={async () => {
                 await updateTheme("dark");
                 setShowThemeModal(false);
+                setShowThemeFromSetting(false);
               }}
             >
               <Text
@@ -262,6 +290,7 @@ export default function ModalComponent({
               onPress={async () => {
                 await updateTheme("system");
                 setShowThemeModal(false);
+                setShowThemeFromSetting(false);
               }}
             >
               <Text
@@ -286,7 +315,7 @@ export default function ModalComponent({
       </Modal>
       {/* currency Modal */}
       <Modal
-        visible={showCurrencyModal}
+        visible={showCurrencyModal || showCurrencyFromSetting}
         transparent
         animationType="fade"
         onRequestClose={() => setShowCurrencyModal(false)}
@@ -339,6 +368,7 @@ export default function ModalComponent({
               onSelect={async (currencyCode) => {
                 await setCurrency(currencyCode);
                 setShowCurrencyModal(false);
+                setCurrencyFromSetting(false);
               }}
             />
           </Pressable>
