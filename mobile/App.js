@@ -5,6 +5,11 @@ import NetInfo from "@react-native-community/netinfo";
 
 import { exportTransactionsToCsv } from "./services/exportService";
 import { printTransactionsReport } from "./services/printService";
+import {
+  configureNotifications,
+  scheduleBudgetWarning,
+  scheduleOverBudgetNotification,
+} from "./services/notificationService";
 
 import TransactionItem from "./components/TransactionItem";
 import CategorySummary from "./components/categorySummary";
@@ -23,6 +28,7 @@ import RegisterScreen from "./screens/RegisterScreen";
 import FormScreen from "./screens/FormScreen";
 import CurrencySetupScreen from "./screens/CurrencySetupScreen";
 import SettingsScreen from "./screens/SettingsScreen";
+import NotificationSettingsScreen from "./screens/NotificationSettingsScreen";
 
 import { logout, restoreSession } from "./services/authService";
 import {
@@ -76,6 +82,8 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCurrencyFromSetting, setCurrencyFromSetting] = useState(false);
   const [showThemeFromSetting, setShowThemeFromSetting] = useState(false);
+  const [showNotificationsFromSetting, setShowNotificationsFromSetting] =
+    useState(false);
 
   const [syncStatus, setSyncStatus] = useState("synced");
 
@@ -123,6 +131,30 @@ function App() {
     (total, transaction) => total + transaction.amount,
     0,
   );
+
+  const checkBudgetNotifications = async () => {
+    if (!user?.id || !budget) {
+      return;
+    }
+
+    const percentage = Number(totalSpent) / Number(budget);
+
+    if (percentage >= 0.8) {
+      await scheduleBudgetWarning(user.id, budget, totalSpent);
+    }
+
+    if (percentage >= 1) {
+      await scheduleOverBudgetNotification(user.id, budget, totalSpent);
+    }
+  };
+
+  useEffect(() => {
+    void checkBudgetNotifications();
+  }, [budget, transactionList]);
+
+  useEffect(() => {
+    void configureNotifications();
+  }, []);
 
   const remaining = budget - totalSpent;
   const isOverBudget = remaining < 0;
@@ -663,6 +695,21 @@ function App() {
         onThemePress={() => {
           setShowSettings(false);
           setShowThemeFromSetting(true);
+        }}
+        onNotificationsPress={() => {
+          setShowSettings(false);
+          setShowNotificationsFromSetting(true);
+        }}
+      />
+    );
+  }
+
+  if (showNotificationsFromSetting) {
+    return (
+      <NotificationSettingsScreen
+        onBack={() => {
+          setShowNotificationsFromSetting(false);
+          setShowSettings(true);
         }}
       />
     );

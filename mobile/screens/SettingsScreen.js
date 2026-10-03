@@ -9,6 +9,7 @@ export default function SettingsScreen({
   onBack,
   onCurrencyPress,
   onThemePress,
+  onNotificationsPress,
 }) {
   const { colors, spacing, typography, radius, themeMode } = useTheme();
 
@@ -92,7 +93,7 @@ export default function SettingsScreen({
         <Text style={styles.sectionTitle}>More</Text>
 
         <View style={styles.section}>
-          <View style={styles.settingRow}>
+          <Pressable style={styles.settingRow} onPress={onNotificationsPress}>
             <View style={styles.settingIcon}>
               <Text style={styles.settingIconText}>🔔</Text>
             </View>
@@ -100,9 +101,10 @@ export default function SettingsScreen({
             <View style={styles.settingContent}>
               <Text style={styles.settingTitle}>Notifications</Text>
 
-              <Text style={styles.settingSubtitle}>Coming soon</Text>
+              <Text style={styles.settingSubtitle}>Daily expense reminder</Text>
             </View>
-          </View>
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
 
           <View style={styles.divider} />
 

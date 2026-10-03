@@ -192,11 +192,17 @@ export default function ModalComponent({
         visible={showThemeModal || showThemeFromSetting}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowThemeModal(false)}
+        onRequestClose={() => {
+          setShowThemeFromSetting(false);
+          setShowThemeModal(false);
+        }}
       >
         <Pressable
           style={styles.menuOverlay}
-          onPress={() => setShowThemeModal(false)}
+          onPress={() => {
+            setShowThemeFromSetting(false);
+            setShowThemeModal(false);
+          }}
         >
           <Pressable
             style={[
@@ -346,7 +352,10 @@ export default function ModalComponent({
               </Text>
 
               <Pressable
-                onPress={() => setShowCurrencyModal(false)}
+                onPress={() => {
+                  setCurrencyFromSetting(false);
+                  setShowCurrencyModal(false);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Close currency selector"
               >
