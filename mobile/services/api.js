@@ -1,6 +1,6 @@
-const API_BASE_URL = "http://192.168.1.101:5000/api";
+const API_BASE_URL = "http://192.168.1.102:5000/api";
 
-const apiRequest = async (endpoint, options = {}) => {
+export const apiRequest = async (endpoint, options = {}) => {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
@@ -114,21 +114,22 @@ export const deleteTransaction = async (token, transactionId) => {
   });
 };
 
-export const getBudget = async (token) => {
-  return apiRequest("/budget", {
+export const getBudget = async (token, month) => {
+  return apiRequest(`/budget?month=${encodeURIComponent(month)}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 };
 
-export const updateBudget = async (token, budget) => {
+export const updateBudget = async (token, month, budget) => {
   return apiRequest("/budget", {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
+      month,
       budget,
     }),
   });

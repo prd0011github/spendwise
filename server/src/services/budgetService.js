@@ -1,21 +1,32 @@
-const budget = require("../models/Budget");
+const Budget = require("../models/Budget");
 
-const getBudget = async (userId) => {
-  const userBudget = await budget.findOne({ userId });
-
-  return userBudget;
+const getBudget = async (userId, month) => {
+  return Budget.findOne({
+    userId,
+    month,
+  });
 };
 
-const setBudget = async (userId, budgetAmount) => {
-  const updatedBudget = await budget.findOneAndUpdate(
-    { userId },
-    { budget: budgetAmount },
-    { new: true, upsert: true, runValidators: true },
+const createOrUpdateBudget = async (userId, month, budgetAmount) => {
+  return Budget.findOneAndUpdate(
+    {
+      userId,
+      month,
+    },
+    {
+      userId,
+      month,
+      budget: budgetAmount,
+    },
+    {
+      new: true,
+      upsert: true,
+      runValidators: true,
+    },
   );
-  return updatedBudget;
 };
 
 module.exports = {
   getBudget,
-  setBudget,
+  createOrUpdateBudget,
 };

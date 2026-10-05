@@ -6,7 +6,15 @@ const budgetSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: [true, "User is required"],
-      unique: true,
+    },
+
+    month: {
+      type: String,
+      required: [true, "Budget month is required"],
+      match: [
+        /^\d{4}-(0[1-9]|1[0-2])$/,
+        "Budget month must be in YYYY-MM format",
+      ],
     },
 
     budget: {
@@ -19,6 +27,8 @@ const budgetSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+budgetSchema.index({ userId: 1, month: 1 }, { unique: true });
 
 const Budget = mongoose.model("Budget", budgetSchema);
 

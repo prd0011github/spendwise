@@ -5,40 +5,46 @@ import {
   updateBudget as updateBudgetApi,
 } from "./api";
 
-const getBudgetCacheKey = (userId) => `@spendwise_budget_${userId}`;
+const getBudgetCacheKey = (userId, month) =>
+  `@spendwise_budget_${userId}_${month}`;
 
-const getPendingBudgetKey = (userId) => `@spendwise_pending_budget_${userId}`;
+const getPendingBudgetCacheKey = (userId, month) =>
+  `@spendwise_pending_budget_${userId}_${month}`;
 
 // -------------------------
 // Server
 // -------------------------
 
-export const fetchBudget = async (token) => {
-  const response = await getBudgetApi(token);
-
-  return response.data;
+export const fetchBudget = async (token, month) => {
+  return getBudgetApi(token, month);
 };
 
-export const saveBudget = async (token, budget) => {
-  const response = await updateBudgetApi(token, budget);
-
-  return response.data;
+export const saveBudget = async (token, month, budget) => {
+  return updateBudgetApi(token, month, budget);
 };
 
 // -------------------------
 // Local cache
 // -------------------------
 
-export const cacheBudget = async (userId, budget) => {
-  if (!userId) return;
+export const cacheBudget = async (userId, month, budget) => {
+  if (!userId || !month) {
+    return;
+  }
 
-  await AsyncStorage.setItem(getBudgetCacheKey(userId), String(budget));
+  const key = getBudgetCacheKey(userId, month);
+
+  await AsyncStorage.setItem(key, String(budget));
 };
 
-export const getCachedBudget = async (userId) => {
-  if (!userId) return null;
+export const getCachedBudget = async (userId, month) => {
+  if (!userId || !month) {
+    return null;
+  }
 
-  const cachedBudget = await AsyncStorage.getItem(getBudgetCacheKey(userId));
+  const key = getBudgetCacheKey(userId, month);
+
+  const cachedBudget = await AsyncStorage.getItem(key);
 
   return cachedBudget !== null ? Number(cachedBudget) : null;
 };
@@ -47,54 +53,54 @@ export const getCachedBudget = async (userId) => {
 // Pending budget sync
 // -------------------------
 
-export const savePendingBudget = async (userId, budget) => {
-  if (!userId) return;
+export const savePendingBudget = async (userId, month, budget) => {
+  if (!userId || !month) {
+    return;
+  }
 
-  await AsyncStorage.setItem(getPendingBudgetKey(userId), String(budget));
+  const key = getPendingBudgetCacheKey(userId, month);
+
+  await AsyncStorage.setItem(key, String(budget));
 };
 
-export const getPendingBudget = async (userId) => {
-  if (!userId) return null;
+export const getPendingBudget = async (userId, month) => {
+  if (!userId || !month) {
+    return null;
+  }
 
-  const pendingBudget = await AsyncStorage.getItem(getPendingBudgetKey(userId));
+  const key = getPendingBudgetCacheKey(userId, month);
+
+  const pendingBudget = await AsyncStorage.getItem(key);
 
   return pendingBudget !== null ? Number(pendingBudget) : null;
 };
 
-export const clearPendingBudget = async (userId) => {
-  if (!userId) return;
+export const clearPendingBudget = async (userId, month) => {
+  if (!userId || !month) {
+    return;
+  }
 
-  await AsyncStorage.removeItem(getPendingBudgetKey(userId));
+  const key = getPendingBudgetCacheKey(userId, month);
+
+  await AsyncStorage.removeItem(key);
 };
 
 // -------------------------
 // Sync pending budget
 // -------------------------
 
-export const syncPendingBudget = async (userId, token) => {
-  if (!userId || !token) {
-    return null;
-  }
-
-  const pendingBudget = await getPendingBudget(userId);
+export const syncPendingBudget = async (token, userId, month) => {
+  const pendingBudget = await getPendingBudget(userId, month);
 
   if (pendingBudget === null) {
     return null;
   }
 
-  try {
-    const budgetData = await saveBudget(token, pendingBudget);
+  const budgetData = await saveBudget(token, month, pendingBudget);
 
-    const updatedBudget = Number(budgetData.budget);
+  await cacheBudget(userId, month, Number(budgetData.budget.budget));
 
-    await cacheBudget(userId, updatedBudget);
+  await clearPendingBudget(userId, month);
 
-    await clearPendingBudget(userId);
-
-    return updatedBudget;
-  } catch (error) {
-    console.log("Budget sync pending:", error.message);
-
-    return null;
-  }
+  return budgetData;
 };

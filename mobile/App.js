@@ -69,6 +69,7 @@ function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [budget, setBudget] = useState(0);
   const [isBudgetLoading, setIsBudgetLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -134,8 +135,56 @@ function App() {
     }
   };
 
-  const totalSpent = transactionList.reduce(
-    (total, transaction) => total + transaction.amount,
+  const getMonthKey = (date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}`;
+  };
+
+  const getMonthYear = (date) => {
+    return date.toLocaleString("default", {
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  const getCurrentMonth = () => {
+    const now = new Date();
+
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}`;
+  };
+
+  const currentMonthKey = getMonthKey(new Date());
+  const selectedMonthKey = getMonthKey(selectedDate);
+
+  const isCurrentMonth = selectedMonthKey === currentMonthKey;
+
+  const previousMonth = () => {
+    setSelectedDate((currentDate) => {
+      const newDate = new Date(currentDate);
+      newDate.setMonth(newDate.getMonth() - 1);
+      return newDate;
+    });
+  };
+
+  const nextMonth = () => {
+    setSelectedDate((currentDate) => {
+      const newDate = new Date(currentDate);
+      newDate.setMonth(newDate.getMonth() + 1);
+      return newDate;
+    });
+  };
+
+  const monthlyTransactions = transactionList.filter(
+    (transaction) => String(transaction.date).slice(0, 7) === selectedMonthKey,
+  );
+
+  const totalSpent = monthlyTransactions.reduce(
+    (total, transaction) => total + Number(transaction.amount || 0),
     0,
   );
 
@@ -170,7 +219,7 @@ function App() {
   const getTransactionsCacheKey = (userId) =>
     `@spendwise_transactions_${userId}`;
 
-  const displayedTransactions = transactionList
+  const displayedTransactions = monthlyTransactions
     .filter((transaction) => {
       const matchesSearch = transaction.name
         .toLowerCase()
@@ -207,47 +256,45 @@ function App() {
     if (!user) {
       return;
     }
-
     const loadBudget = async () => {
       setIsBudgetLoading(true);
 
       try {
-        // Load cached budget first
-        const cachedBudget = await getCachedBudget(user.id);
+        const cachedBudget = await getCachedBudget(user.id, selectedMonthKey);
 
         if (cachedBudget !== null) {
           setBudget(cachedBudget);
           setIsBudgetLoading(false);
+        } else {
+          setBudget(0);
         }
 
-        // Then try to get the latest budget from server
         const token = await getAuthToken();
 
         if (!token) {
           return;
         }
 
-        const budgetData = await fetchBudget(token);
+        const budgetData = await fetchBudget(token, selectedMonthKey);
 
-        if (budgetData) {
-          const serverBudget = Number(budgetData.budget);
+        if (budgetData?.budget) {
+          const serverBudget = Number(budgetData.budget.budget);
 
           setBudget(serverBudget);
 
-          await cacheBudget(user.id, serverBudget);
+          await cacheBudget(user.id, selectedMonthKey, serverBudget);
+        } else {
+          setBudget(0);
         }
       } catch (error) {
         console.log("Error loading budget from server:", error.message);
-
-        // Cached budget is already displayed,
-        // so nothing else is required here.
       } finally {
         setIsBudgetLoading(false);
       }
     };
 
-    loadBudget();
-  }, [user]);
+    void loadBudget();
+  }, [user, selectedMonthKey]);
 
   useEffect(() => {
     if (!isLoaded || !user) {
@@ -438,8 +485,13 @@ function App() {
         setSyncStatus("syncing");
 
         await syncPendingTransactionsNow();
+        const currentMonth = getCurrentMonth();
 
-        const syncedBudget = await syncPendingBudget(user.id, token);
+        const syncedBudget = await syncPendingBudget(
+          token,
+          user.id,
+          currentMonth,
+        );
 
         if (syncedBudget !== null) {
           setBudget(syncedBudget);
@@ -614,6 +666,8 @@ function App() {
   };
 
   const handleSaveBudget = async (newBudget) => {
+    const currentMonth = getCurrentMonth();
+
     try {
       const updatedBudget = Number(newBudget);
 
@@ -625,7 +679,7 @@ function App() {
       setBudget(updatedBudget);
 
       // Cache locally immediately
-      await cacheBudget(user.id, updatedBudget);
+      await cacheBudget(user.id, currentMonth, updatedBudget);
 
       // Close budget screen immediately
       setShowBudgetForm(false);
@@ -639,24 +693,28 @@ function App() {
             throw new Error("Authentication token is missing");
           }
 
-          const budgetData = await saveBudget(token, updatedBudget);
+          const budgetData = await saveBudget(
+            token,
+            currentMonth,
+            updatedBudget,
+          );
 
-          const serverBudget = Number(budgetData.budget);
+          const serverBudget = Number(budgetData.budget.budget);
 
           // Update local state with server value
           setBudget(serverBudget);
 
           // Keep cache synchronized
-          await cacheBudget(user.id, serverBudget);
+          await cacheBudget(user.id, currentMonth, serverBudget);
 
           // Clear pending budget if one exists
-          await clearPendingBudget(user.id);
+          await clearPendingBudget(user.id, currentMonth);
 
           console.log("Budget synced successfully");
         } catch (error) {
           console.log("Budget saved locally. Sync pending:", error.message);
 
-          await savePendingBudget(user.id, updatedBudget);
+          await savePendingBudget(user.id, currentMonth, updatedBudget);
         }
       })();
     } catch (error) {
@@ -898,6 +956,28 @@ function App() {
         />
       ) : (
         <>
+          {/* Month selector*/}
+          <View style={styles.monthSelector}>
+            <Pressable
+              style={styles.monthButton}
+              onPress={previousMonth}
+              accessibilityRole="button"
+              accessibilityLabel="Previous month"
+            >
+              <Text style={styles.monthArrow}>‹</Text>
+            </Pressable>
+
+            <Text style={styles.monthText}>{getMonthYear(selectedDate)}</Text>
+
+            <Pressable
+              style={styles.monthButton}
+              onPress={nextMonth}
+              accessibilityRole="button"
+              accessibilityLabel="Next month"
+            >
+              <Text style={styles.monthArrow}>›</Text>
+            </Pressable>
+          </View>
           {/* Summary Card */}
           <View
             style={[
@@ -916,7 +996,7 @@ function App() {
                 },
               ]}
             >
-              THIS MONTH
+              {getMonthYear(selectedDate).toUpperCase()}
             </Text>
 
             <Text
@@ -1023,8 +1103,8 @@ function App() {
             setEditingTransaction={setEditingTransaction}
             setShowForm={setShowForm}
           />
-          <TopSpending transactions={transactionList} />
-          <CategorySummary transactions={transactionList} />
+          <TopSpending transactions={monthlyTransactions} />
+          <CategorySummary transactions={monthlyTransactions} />
           <MonthlySummary transactions={transactionList} />
           <Pressable style={styles.addButton} onPress={() => setShowForm(true)}>
             <Text style={styles.addButtonText}>＋ Add Expense</Text>
@@ -1172,5 +1252,39 @@ const createStyles = (colors, spacing, typography, radius) =>
       color: colors.white,
       fontSize: 16,
       fontWeight: "700",
+    },
+    // month selector style
+    monthSelector: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.lg,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+
+    monthButton: {
+      width: 44,
+      height: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: radius.round,
+      backgroundColor: colors.primaryLight,
+    },
+
+    monthArrow: {
+      fontSize: 32,
+      lineHeight: 34,
+      color: colors.primary,
+      fontWeight: "400",
+    },
+
+    monthText: {
+      ...typography.heading,
+      color: colors.textPrimary,
     },
   });
