@@ -1,5 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const Transaction = require("../models/Transaction");
+const Budget = require("../models/Budget");
 const User = require("../models/User");
 
 const registerUser = async ({ name, email, password }) => {
@@ -71,8 +73,65 @@ const getCurrentUser = async (userId) => {
   return user;
 };
 
+const changeUserPassword = async (userId, currentPassword, newPassword) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+
+    throw error;
+  }
+
+  const isCurrentPasswordValid = await bcrypt.compare(
+    currentPassword,
+    user.password,
+  );
+
+  if (!isCurrentPasswordValid) {
+    const error = new Error("Current password is incorrect");
+    error.statusCode = 401;
+
+    throw error;
+  }
+
+  if (currentPassword === newPassword) {
+    const error = new Error(
+      "New password must be different from the current password",
+    );
+    error.statusCode = 400;
+
+    throw error;
+  }
+
+  user.password = await bcrypt.hash(newPassword, 10);
+
+  await user.save();
+};
+
+const deleteUserAccount = async (userId) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+
+    throw error;
+  }
+
+  await Transaction.deleteMany({ userId });
+
+  await Budget.deleteMany({ userId });
+
+  await User.deleteOne({
+    _id: userId,
+  });
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getCurrentUser,
+  changeUserPassword,
+  deleteUserAccount,
 };

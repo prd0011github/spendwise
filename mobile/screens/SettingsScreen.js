@@ -10,6 +10,7 @@ export default function SettingsScreen({
   onCurrencyPress,
   onThemePress,
   onNotificationsPress,
+  onAccountPress,
 }) {
   const { colors, spacing, typography, radius, themeMode } = useTheme();
 
@@ -108,7 +109,12 @@ export default function SettingsScreen({
 
           <View style={styles.divider} />
 
-          <View style={styles.settingRow}>
+          <Pressable
+            style={styles.settingRow}
+            onPress={onAccountPress}
+            accessibilityRole="button"
+            accessibilityLabel="Account"
+          >
             <View style={styles.settingIcon}>
               <Text style={styles.settingIconText}>👤</Text>
             </View>
@@ -116,9 +122,13 @@ export default function SettingsScreen({
             <View style={styles.settingContent}>
               <Text style={styles.settingTitle}>Account</Text>
 
-              <Text style={styles.settingSubtitle}>Coming soon</Text>
+              <Text style={styles.settingSubtitle}>
+                Profile and account settings
+              </Text>
             </View>
-          </View>
+
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>

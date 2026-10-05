@@ -51,6 +51,28 @@ export const getCurrentUser = async (token) => {
   });
 };
 
+export const changePassword = async (token, currentPassword, newPassword) => {
+  return apiRequest("/auth/change-password", {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      currentPassword,
+      newPassword,
+    }),
+  });
+};
+
+export const deleteAccount = async (token) => {
+  return apiRequest("/auth/account", {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
 export const getTransactions = async (token) => {
   return apiRequest("/transactions", {
     headers: {

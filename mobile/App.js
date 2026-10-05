@@ -29,8 +29,11 @@ import FormScreen from "./screens/FormScreen";
 import CurrencySetupScreen from "./screens/CurrencySetupScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import NotificationSettingsScreen from "./screens/NotificationSettingsScreen";
+import AccountScreen from "./screens/AccountScreen";
+import ChangePasswordScreen from "./screens/ChangePasswordScreen";
 
 import { logout, restoreSession } from "./services/authService";
+import { deleteAccount } from "./services/api";
 import {
   fetchTransactions,
   addTransaction,
@@ -50,10 +53,12 @@ import {
   clearPendingBudget,
   syncPendingBudget,
 } from "./services/budgetService";
+import { cancelDailyExpenseReminder } from "./services/notificationService";
 
 import { ThemeProvider } from "./context/ThemeContext";
 import { CurrencyProvider, useCurrency } from "./context/CurrencyContext";
 import { useTheme } from "./context/ThemeContext";
+import { clearUserData } from "./utils/clearUserData";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function App() {
@@ -84,6 +89,8 @@ function App() {
   const [showThemeFromSetting, setShowThemeFromSetting] = useState(false);
   const [showNotificationsFromSetting, setShowNotificationsFromSetting] =
     useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const [syncStatus, setSyncStatus] = useState("synced");
 
@@ -700,6 +707,10 @@ function App() {
           setShowSettings(false);
           setShowNotificationsFromSetting(true);
         }}
+        onAccountPress={() => {
+          setShowSettings(false);
+          setShowAccount(true);
+        }}
       />
     );
   }
@@ -710,6 +721,63 @@ function App() {
         onBack={() => {
           setShowNotificationsFromSetting(false);
           setShowSettings(true);
+        }}
+      />
+    );
+  }
+
+  if (showAccount) {
+    return (
+      <AccountScreen
+        onBack={() => {
+          setShowAccount(false);
+          setShowSettings(true);
+        }}
+        onLogout={async () => {
+          await handleLogout();
+          setShowAccount(false);
+        }}
+        onChangePassword={() => {
+          setShowAccount(false);
+          setShowChangePassword(true);
+        }}
+        onDeleteAccount={async () => {
+          const token = await getAuthToken();
+
+          if (!token) {
+            throw new Error("Authentication token is missing.");
+          }
+
+          const userId = user?.id;
+
+          if (!userId) {
+            throw new Error("User information is missing.");
+          }
+
+          // Delete account and server data first
+          await deleteAccount(token);
+
+          // Cancel the user's scheduled daily reminder
+          await cancelDailyExpenseReminder(userId);
+
+          // Remove all user-specific local data
+          await clearUserData(userId);
+
+          // Use the existing logout flow
+          await handleLogout();
+
+          setShowAccount(false);
+        }}
+      />
+    );
+  }
+
+  if (showChangePassword) {
+    return (
+      <ChangePasswordScreen
+        onBack={() => {
+          setShowChangePassword(false);
+          setShowAccount(true);
         }}
       />
     );
