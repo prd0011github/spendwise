@@ -533,7 +533,47 @@ function App() {
 
       const transactionId = editingTransactionId;
 
-      // Update UI immediately
+      // --------------------------------------------------
+      // Offline-created transaction
+      // --------------------------------------------------
+      if (transactionId.startsWith("local_")) {
+        setTransactionList((currentTransactions) =>
+          currentTransactions.map((transaction) =>
+            transaction.id === transactionId
+              ? {
+                  ...transaction,
+                  ...updatedTransactionData,
+                  isPendingSync: true,
+                  syncAction: "create",
+                }
+              : transaction,
+          ),
+        );
+
+        // Update the existing pending CREATE.
+        // This must NOT create a pending UPDATE.
+        await addPendingTransactionUpdate(
+          user.id,
+          transactionId,
+          updatedTransactionData,
+        );
+
+        setShowForm(false);
+        setEditingTransactionId(null);
+        setEditingTransaction(null);
+        setIsSavingTransaction(false);
+
+        console.log(
+          "Offline transaction updated locally. Pending create updated.",
+        );
+
+        return;
+      }
+
+      // --------------------------------------------------
+      // Existing server transaction
+      // --------------------------------------------------
+
       setTransactionList((currentTransactions) =>
         currentTransactions.map((transaction) =>
           transaction.id === transactionId
@@ -547,12 +587,9 @@ function App() {
         ),
       );
 
-      // Close form immediately
       setShowForm(false);
       setEditingTransactionId(null);
       setEditingTransaction(null);
-
-      // Local operation is complete
       setIsSavingTransaction(false);
 
       // Sync with server in the background
@@ -570,7 +607,6 @@ function App() {
             updatedTransactionData,
           );
 
-          // Replace local transaction with server transaction
           setTransactionList((currentTransactions) =>
             currentTransactions.map((transaction) =>
               transaction.id === transactionId
@@ -610,6 +646,7 @@ function App() {
       category: expense.category,
       date: transactionDate,
       isPendingSync: true,
+      syncAction: "create",
     };
 
     // Add transaction immediately to UI

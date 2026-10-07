@@ -42,32 +42,8 @@ export const removeTransaction = async (token, transactionId) => {
   await deleteTransaction(token, transactionId);
 };
 
-const getTransactionsCacheKey = (userId) => `@spendwise_transactions_${userId}`;
-
 const getPendingTransactionsKey = (userId) =>
   `@spendwise_pending_transactions_${userId}`;
-
-export const getCachedTransactions = async (userId) => {
-  if (!userId) {
-    return [];
-  }
-
-  const cacheKey = getTransactionsCacheKey(userId);
-
-  const storedTransactions = await AsyncStorage.getItem(cacheKey);
-
-  return storedTransactions ? JSON.parse(storedTransactions) : [];
-};
-
-export const cacheTransactions = async (userId, transactions) => {
-  if (!userId) {
-    return;
-  }
-
-  const cacheKey = getTransactionsCacheKey(userId);
-
-  await AsyncStorage.setItem(cacheKey, JSON.stringify(transactions));
-};
 
 export const getPendingTransactions = async (userId) => {
   if (!userId) {
@@ -144,7 +120,7 @@ export const syncPendingTransactions = async (userId, token) => {
             transaction: serverTransaction,
             syncAction: "update",
           });
-        } else {
+        } else if (transaction.syncAction === "create") {
           const serverTransaction = await addTransaction(token, {
             name: transaction.name,
             amount: transaction.amount,
@@ -186,6 +162,57 @@ export const addPendingTransactionUpdate = async (
   }
 
   const pendingTransactions = await getPendingTransactions(userId);
+
+  // --------------------------------------------------
+  // Offline-created transaction
+  // --------------------------------------------------
+  // A local_* transaction does not have a MongoDB ID yet.
+  // Therefore it must remain a CREATE operation.
+  if (transactionId.startsWith("local_")) {
+    const pendingCreateIndex = pendingTransactions.findIndex(
+      (transaction) =>
+        transaction.syncAction === "create" && transaction.id === transactionId,
+    );
+
+    if (pendingCreateIndex !== -1) {
+      // Update the existing pending CREATE
+      const updatedPendingTransactions = [...pendingTransactions];
+
+      updatedPendingTransactions[pendingCreateIndex] = {
+        ...updatedPendingTransactions[pendingCreateIndex],
+        ...transactionData,
+        syncAction: "create",
+      };
+
+      await savePendingTransactions(userId, updatedPendingTransactions);
+
+      console.log("Updated existing pending CREATE:", transactionId);
+
+      return;
+    }
+
+    // The CREATE is not in the queue yet.
+    // Create it now instead of creating an UPDATE.
+    const pendingCreate = {
+      id: transactionId,
+      ...transactionData,
+      syncAction: "create",
+      isPendingSync: true,
+    };
+
+    await savePendingTransactions(userId, [
+      ...pendingTransactions,
+      pendingCreate,
+    ]);
+
+    console.log("Created pending CREATE for local transaction:", transactionId);
+
+    return;
+  }
+
+  // --------------------------------------------------
+  // Existing server transaction
+  // --------------------------------------------------
 
   const updatedPendingTransactions = pendingTransactions.filter(
     (transaction) =>
