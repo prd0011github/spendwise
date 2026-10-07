@@ -96,7 +96,20 @@ export const syncPendingTransactions = async (userId, token) => {
     for (const transaction of pendingTransactions) {
       try {
         if (transaction.syncAction === "delete") {
-          await deleteTransaction(token, transaction.transactionId);
+          try {
+            await deleteTransaction(token, transaction.transactionId);
+          } catch (error) {
+            if (
+              error.message?.toLowerCase().includes("transaction not found")
+            ) {
+              console.log(
+                "Transaction already deleted:",
+                transaction.transactionId,
+              );
+            } else {
+              throw error;
+            }
+          }
 
           syncedTransactions.push({
             localId: transaction.transactionId,
@@ -233,12 +246,34 @@ export const addPendingTransactionUpdate = async (
 };
 
 export const addPendingTransactionDelete = async (userId, transactionId) => {
-  if (!userId || !transactionId) {
-    return;
-  }
+  if (!userId || !transactionId) return;
 
   const pendingTransactions = await getPendingTransactions(userId);
 
+  // Offline-created transaction:
+  // It does not exist on the server yet,
+  // so deleting it means removing the pending CREATE.
+  if (transactionId.startsWith("local_")) {
+    const updatedPendingTransactions = pendingTransactions.filter(
+      (transaction) =>
+        !(
+          transaction.syncAction === "create" &&
+          transaction.id === transactionId
+        ),
+    );
+
+    await savePendingTransactions(userId, updatedPendingTransactions);
+
+    console.log(
+      "Removed pending CREATE for deleted local transaction:",
+      transactionId,
+    );
+
+    return;
+  }
+
+  // Existing server transaction:
+  // Queue DELETE for synchronization.
   const updatedPendingTransactions = pendingTransactions.filter(
     (transaction) =>
       !(
@@ -254,4 +289,6 @@ export const addPendingTransactionDelete = async (userId, transactionId) => {
   });
 
   await savePendingTransactions(userId, updatedPendingTransactions);
+
+  console.log("Added pending DELETE:", transactionId);
 };
