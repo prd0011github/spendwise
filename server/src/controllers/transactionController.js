@@ -26,9 +26,9 @@ const addTransaction = async (req, res) => {
       });
     }
 
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: "Failed to create transaction",
+      message: error.message || "Failed to create transaction",
     });
   }
 };

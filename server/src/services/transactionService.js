@@ -1,12 +1,34 @@
 const Transaction = require("../models/Transaction");
 
 const createTransaction = async (userId, transactionData) => {
-  const transaction = await Transaction.create({
+  const today = new Date();
+
+  const todayKey = `${today.getFullYear()}-${String(
+    today.getMonth() + 1,
+  ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  const transactionDate = String(transactionData.date);
+  const currentMonthKey = todayKey.slice(0, 7);
+  const transactionMonthKey = transactionDate.slice(0, 7);
+
+  if (transactionMonthKey !== currentMonthKey) {
+    const error = new Error(
+      "Transactions can only be created for the current month",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (transactionDate > todayKey) {
+    const error = new Error("Transaction date cannot be in the future");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return Transaction.create({
     ...transactionData,
     userId,
   });
-
-  return transaction;
 };
 
 const getTransactions = async (userId) => {
@@ -18,6 +40,31 @@ const getTransactions = async (userId) => {
 };
 
 const updateTransaction = async (userId, transactionId, transactionData) => {
+  const existingTransaction = await Transaction.findOne({
+    _id: transactionId,
+    userId,
+  });
+
+  if (!existingTransaction) {
+    return null;
+  }
+
+  const today = new Date();
+
+  const currentMonthKey = `${today.getFullYear()}-${String(
+    today.getMonth() + 1,
+  ).padStart(2, "0")}`;
+
+  const transactionMonthKey = String(existingTransaction.date).slice(0, 7);
+
+  if (transactionMonthKey !== currentMonthKey) {
+    const error = new Error("Historical transactions cannot be edited");
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
   const transaction = await Transaction.findOneAndUpdate(
     {
       _id: transactionId,
@@ -34,6 +81,31 @@ const updateTransaction = async (userId, transactionId, transactionData) => {
 };
 
 const deleteTransaction = async (userId, transactionId) => {
+  const existingTransaction = await Transaction.findOne({
+    _id: transactionId,
+    userId,
+  });
+
+  if (!existingTransaction) {
+    return null;
+  }
+
+  const today = new Date();
+
+  const currentMonthKey = `${today.getFullYear()}-${String(
+    today.getMonth() + 1,
+  ).padStart(2, "0")}`;
+
+  const transactionMonthKey = String(existingTransaction.date).slice(0, 7);
+
+  if (transactionMonthKey !== currentMonthKey) {
+    const error = new Error("Historical transactions cannot be deleted");
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
   const transaction = await Transaction.findOneAndDelete({
     _id: transactionId,
     userId,
