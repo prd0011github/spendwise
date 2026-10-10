@@ -1139,12 +1139,36 @@ function App() {
             setEditingTransactionId={setEditingTransactionId}
             setEditingTransaction={setEditingTransaction}
             setShowForm={setShowForm}
+            isCurrentMonth={isCurrentMonth}
           />
           <TopSpending transactions={monthlyTransactions} />
           <CategorySummary transactions={monthlyTransactions} />
           <MonthlySummary transactions={transactionList} />
-          <Pressable style={styles.addButton} onPress={() => setShowForm(true)}>
-            <Text style={styles.addButtonText}>＋ Add Expense</Text>
+          <Pressable
+            style={[styles.addButton, !isCurrentMonth && styles.disabledButton]}
+            onPress={() => {
+              if (!isCurrentMonth) {
+                return;
+              }
+
+              setShowForm(true);
+            }}
+            disabled={!isCurrentMonth}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isCurrentMonth
+                ? "Add expense"
+                : "Add expense unavailable for this month"
+            }
+          >
+            <Text
+              style={[
+                styles.addButtonText,
+                !isCurrentMonth && styles.disabledButtonText,
+              ]}
+            >
+              ＋ Add Expense
+            </Text>
           </Pressable>
         </>
       )}
@@ -1289,6 +1313,13 @@ const createStyles = (colors, spacing, typography, radius) =>
       color: colors.white,
       fontSize: 16,
       fontWeight: "700",
+    },
+    disabledButton: {
+      opacity: 0.5,
+    },
+
+    disabledButtonText: {
+      opacity: 0.7,
     },
     // month selector style
     monthSelector: {

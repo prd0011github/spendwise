@@ -18,6 +18,7 @@ export default function TransactionItem({
   setEditingTransactionId,
   setEditingTransaction,
   setShowForm,
+  isCurrentMonth,
 }) {
   const { colors, spacing, radius } = useTheme();
   const { formatAmount } = useCurrency();
@@ -104,9 +105,31 @@ export default function TransactionItem({
         displayedTransactions.map((transaction) => (
           <Pressable
             key={transaction.id}
-            style={styles.transaction}
-            onPress={() => handleEditTransaction(transaction)}
-            onLongPress={() => handleDeleteTransaction(transaction.id)}
+            style={[
+              styles.transaction,
+              !isCurrentMonth && styles.readOnlyTransaction,
+            ]}
+            onPress={() => {
+              if (!isCurrentMonth) {
+                return;
+              }
+
+              handleEditTransaction(transaction);
+            }}
+            onLongPress={() => {
+              if (!isCurrentMonth) {
+                return;
+              }
+
+              handleDeleteTransaction(transaction.id);
+            }}
+            disabled={!isCurrentMonth}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isCurrentMonth
+                ? `${transaction.name}, tap to edit or long press to delete`
+                : `${transaction.name}, read only`
+            }
           >
             <View style={styles.transactionInfo}>
               <Text style={styles.transactionName}>
@@ -209,6 +232,10 @@ const createStyles = (colors, spacing, radius) =>
       fontSize: 13,
       color: colors.textSecondary,
       marginTop: spacing.xs,
+    },
+
+    readOnlyTransaction: {
+      opacity: 0.65,
     },
 
     viewAllButton: {
