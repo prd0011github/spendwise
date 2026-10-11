@@ -119,22 +119,6 @@ function App() {
     return "Good evening";
   };
 
-  const handleExportTransactions = async () => {
-    try {
-      await exportTransactionsToCsv(transactionList);
-    } catch (error) {
-      console.log("Transaction export failed:", error.message);
-    }
-  };
-
-  const handlePrintReport = async () => {
-    try {
-      await printTransactionsReport(transactionList, formatAmount);
-    } catch (error) {
-      console.log("Print report failed:", error.message);
-    }
-  };
-
   const getMonthKey = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
       2,
@@ -187,6 +171,22 @@ function App() {
     (total, transaction) => total + Number(transaction.amount || 0),
     0,
   );
+
+  const handleExportTransactions = async () => {
+    try {
+      await exportTransactionsToCsv(monthlyTransactions);
+    } catch (error) {
+      console.log("Transaction export failed:", error.message);
+    }
+  };
+
+  const handlePrintReport = async () => {
+    try {
+      await printTransactionsReport(monthlyTransactions, formatAmount);
+    } catch (error) {
+      console.log("Print report failed:", error.message);
+    }
+  };
 
   const checkBudgetNotifications = async () => {
     if (!user?.id || !budget) {
@@ -984,6 +984,7 @@ function App() {
         setCurrencyFromSetting={setCurrencyFromSetting}
         setShowThemeFromSetting={setShowThemeFromSetting}
         showThemeFromSetting={showThemeFromSetting}
+        isCurrentMonth={isCurrentMonth}
       />
       {showAnalytics ? (
         <Analytics

@@ -18,6 +18,7 @@ export default function ModalComponent({
   setCurrencyFromSetting,
   showThemeFromSetting,
   setShowThemeFromSetting,
+  isCurrentMonth,
 }) {
   const { colors, themeMode, updateTheme } = useTheme();
   const { setCurrency } = useCurrency();
@@ -103,15 +104,23 @@ export default function ModalComponent({
             </Pressable>
 
             <Pressable
-              style={styles.menuItem}
+              style={[
+                styles.menuItem,
+                !isCurrentMonth && styles.disabledButton,
+              ]}
               onPress={() => {
                 setShowMenu(false);
                 setShowBudgetForm(true);
               }}
+              disabled={!isCurrentMonth}
             >
               <Text style={styles.menuIcon}>💰</Text>
               <Text
-                style={[styles.menuItemText, { color: colors.textPrimary }]}
+                style={[
+                  styles.menuItemText,
+                  { color: colors.textPrimary },
+                  !isCurrentMonth && styles.disabledButtonText,
+                ]}
               >
                 Budget Settings
               </Text>
@@ -432,6 +441,14 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 15,
     fontWeight: "500",
+  },
+
+  disabledButton: {
+    opacity: 0.5,
+  },
+
+  disabledButtonText: {
+    opacity: 0.7,
   },
 
   menuDivider: {
