@@ -1,4 +1,10 @@
-import { loginUser, registerUser, getCurrentUser } from "./api";
+import {
+  loginUser,
+  registerUser,
+  getCurrentUser,
+  requestPasswordReset as requestPasswordResetAPI,
+  resetPassword as resetPasswordAPI,
+} from "./api";
 
 import {
   saveAuthToken,
@@ -19,6 +25,14 @@ export const login = async (email, password) => {
 
 export const register = async (name, email, password) => {
   return registerUser(name, email, password);
+};
+
+export const requestPasswordReset = async (email) => {
+  return requestPasswordResetAPI(email);
+};
+
+export const resetPassword = async (token, newPassword) => {
+  return resetPasswordAPI(token, newPassword);
 };
 
 export const restoreSession = async () => {

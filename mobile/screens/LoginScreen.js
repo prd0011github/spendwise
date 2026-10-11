@@ -10,7 +10,7 @@ import {
 
 import { login } from "../services/authService";
 
-export default function LoginScreen({ onLogin, onRegister }) {
+export default function LoginScreen({ onLogin, onRegister, onForgotPassword }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,6 +67,9 @@ export default function LoginScreen({ onLogin, onRegister }) {
           value={password}
           onChangeText={setPassword}
         />
+        <Pressable style={styles.forgotPasswordLink} onPress={onForgotPassword}>
+          <Text style={styles.forgotPasswordLinkText}>Forgot Password?</Text>
+        </Pressable>
 
         <Pressable
           style={styles.loginButton}
@@ -149,6 +152,18 @@ const styles = StyleSheet.create({
   },
 
   registerLinkText: {
+    color: "#2563EB",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  forgotPasswordLink: {
+    alignSelf: "flex-end",
+    marginTop: -8,
+    marginBottom: 18,
+  },
+
+  forgotPasswordLinkText: {
     color: "#2563EB",
     fontSize: 14,
     fontWeight: "600",

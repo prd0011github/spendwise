@@ -1,4 +1,11 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Linking,
+} from "react-native";
 
 import React, { useEffect, useState } from "react";
 import NetInfo from "@react-native-community/netinfo";
@@ -10,6 +17,8 @@ import {
   scheduleBudgetWarning,
   scheduleOverBudgetNotification,
 } from "./services/notificationService";
+import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
+import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 
 import TransactionItem from "./components/TransactionItem";
 import CategorySummary from "./components/categorySummary";
@@ -81,6 +90,8 @@ function App() {
   const [user, setUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [showRegister, setShowRegister] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetPasswordToken, setResetPasswordToken] = useState(null);
 
   const [showMenu, setShowMenu] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -758,6 +769,38 @@ function App() {
       console.log("Error saving budget locally:", error.message);
     }
   };
+
+  useEffect(() => {
+    const handleResetLink = (url) => {
+      if (!url) {
+        return;
+      }
+
+      const parsedUrl = Linking.parse(url);
+
+      if (
+        parsedUrl.path === "reset-password" ||
+        parsedUrl.hostname === "reset-password"
+      ) {
+        const token = parsedUrl.queryParams?.token;
+
+        if (typeof token === "string" && token.length > 0) {
+          setResetPasswordToken(token);
+          setShowForgotPassword(false);
+          setShowRegister(false);
+        }
+      }
+    };
+
+    Linking.getInitialURL().then(handleResetLink);
+
+    const subscription = Linking.addEventListener("url", ({ url }) =>
+      handleResetLink(url),
+    );
+
+    return () => subscription.remove();
+  }, []);
+
   if (showForm || showBudgetForm) {
     return (
       <FormScreen
@@ -887,6 +930,25 @@ function App() {
   }
 
   if (!user) {
+    if (showForgotPassword) {
+      return (
+        <ForgotPasswordScreen onBack={() => setShowForgotPassword(false)} />
+      );
+    }
+
+    if (resetPasswordToken) {
+      return (
+        <ResetPasswordScreen
+          token={resetPasswordToken}
+          onBackToLogin={() => {
+            setResetPasswordToken(null);
+            setShowForgotPassword(false);
+            setShowRegister(false);
+          }}
+        />
+      );
+    }
+
     if (showRegister) {
       return (
         <RegisterScreen
@@ -900,6 +962,7 @@ function App() {
       <LoginScreen
         onLogin={(data) => setUser(data.user)}
         onRegister={() => setShowRegister(true)}
+        onForgotPassword={() => setShowForgotPassword(true)}
       />
     );
   }

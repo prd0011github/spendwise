@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://192.168.1.102:5000/api";
+const API_BASE_URL = "http://192.168.1.100:5000/api";
 
 export const apiRequest = async (endpoint, options = {}) => {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -28,6 +28,25 @@ export const loginUser = async (email, password) => {
     body: JSON.stringify({
       email,
       password,
+    }),
+  });
+};
+
+export const requestPasswordReset = async (email) => {
+  return apiRequest("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({
+      email,
+    }),
+  });
+};
+
+export const resetPassword = async (token, newPassword) => {
+  return apiRequest("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({
+      token,
+      newPassword,
     }),
   });
 };

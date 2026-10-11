@@ -4,6 +4,8 @@ const {
   getCurrentUser,
   changeUserPassword,
   deleteUserAccount,
+  requestPasswordReset,
+  resetUserPassword,
 } = require("../services/authService");
 
 const register = async (req, res) => {
@@ -169,10 +171,74 @@ const deleteAccount = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    await requestPasswordReset(email);
+
+    res.status(200).json({
+      success: true,
+      message:
+        "If an account exists for that email, a password reset email has been sent.",
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to process password reset request",
+    });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset token and new password are required",
+      });
+    }
+
+    await resetUserPassword(token, newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error.message);
+
+    if (error.statusCode === 400) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to reset password",
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   changePassword,
   deleteAccount,
+  forgotPassword,
+  resetPassword,
 };
