@@ -156,6 +156,22 @@ export const syncPendingTransactions = async (userId, token) => {
           error.message,
         );
 
+        // Keep operations that may succeed on a later attempt.
+        // Do not retry permanent client-side failures indefinitely.
+        const statusCode = error.statusCode;
+
+        if (statusCode === 400 || statusCode === 403 || statusCode === 404) {
+          console.warn("Removing permanently rejected pending operation:", {
+            id: transaction.id,
+            action: transaction.syncAction,
+            statusCode,
+            message: error.message,
+          });
+          continue;
+        }
+
+        // Network errors, authentication errors, and server errors
+        // remain pending for a future retry.
         remainingTransactions.push(transaction);
       }
     }
