@@ -94,6 +94,13 @@ const updateTransaction = async (userId, transactionId, transactionData) => {
 
   const transactionMonthKey = String(existingTransaction.date).slice(0, 7);
 
+  console.log("Transaction date debug:", {
+    storedDate: existingTransaction.date,
+    transactionMonthKey,
+    currentMonthKey,
+    serverDate: new Date().toISOString(),
+  });
+
   if (transactionMonthKey !== currentMonthKey) {
     const error = new Error("Historical transactions cannot be edited");
 
@@ -134,6 +141,13 @@ const deleteTransaction = async (userId, transactionId) => {
   ).padStart(2, "0")}`;
 
   const transactionMonthKey = String(existingTransaction.date).slice(0, 7);
+
+  console.log("Transaction date debug:", {
+    storedDate: existingTransaction.date,
+    transactionMonthKey,
+    currentMonthKey,
+    serverDate: new Date().toISOString(),
+  });
 
   if (transactionMonthKey !== currentMonthKey) {
     const error = new Error("Historical transactions cannot be deleted");
