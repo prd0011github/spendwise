@@ -92,7 +92,9 @@ const updateTransaction = async (userId, transactionId, transactionData) => {
     today.getMonth() + 1,
   ).padStart(2, "0")}`;
 
-  const transactionMonthKey = String(existingTransaction.date).slice(0, 7);
+  const transactionMonthKey = new Date(existingTransaction.date)
+    .toISOString()
+    .slice(0, 7);
 
   console.log("Transaction date debug:", {
     storedDate: existingTransaction.date,
@@ -140,7 +142,9 @@ const deleteTransaction = async (userId, transactionId) => {
     today.getMonth() + 1,
   ).padStart(2, "0")}`;
 
-  const transactionMonthKey = String(existingTransaction.date).slice(0, 7);
+  const transactionMonthKey = new Date(existingTransaction.date)
+    .toISOString()
+    .slice(0, 7);
 
   console.log("Transaction date debug:", {
     storedDate: existingTransaction.date,
