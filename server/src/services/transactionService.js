@@ -1,13 +1,50 @@
 const Transaction = require("../models/Transaction");
 
 const createTransaction = async (userId, transactionData) => {
-  const today = new Date();
+  const { timeZone = "UTC", ...transactionFields } = transactionData;
 
-  const todayKey = `${today.getFullYear()}-${String(
-    today.getMonth() + 1,
-  ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  // Validate the supplied time zone.
+  let todayKey;
 
-  const transactionDate = String(transactionData.date);
+  try {
+    const dateParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+
+    const parts = Object.fromEntries(
+      dateParts.map(({ type, value }) => [type, value]),
+    );
+
+    todayKey = `${parts.year}-${parts.month}-${parts.day}`;
+  } catch {
+    const error = new Error("Invalid time zone");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const transactionDate = String(transactionFields.date || "");
+
+  // Validate YYYY-MM-DD format and actual calendar date.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(transactionDate)) {
+    const error = new Error("Invalid transaction date");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const parsedDate = new Date(`${transactionDate}T00:00:00.000Z`);
+
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.toISOString().slice(0, 10) !== transactionDate
+  ) {
+    const error = new Error("Invalid transaction date");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const currentMonthKey = todayKey.slice(0, 7);
   const transactionMonthKey = transactionDate.slice(0, 7);
 
@@ -26,7 +63,7 @@ const createTransaction = async (userId, transactionData) => {
   }
 
   return Transaction.create({
-    ...transactionData,
+    ...transactionFields,
     userId,
   });
 };

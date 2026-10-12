@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://192.168.1.100:5000/api";
+const API_BASE_URL = "https://spendwise-5jkm.onrender.com/api";
 
 export const apiRequest = async (endpoint, options = {}) => {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -9,11 +9,33 @@ export const apiRequest = async (endpoint, options = {}) => {
     },
   });
 
-  const data = await response.json();
+  const responseText = await response.text();
+
+  let data = {};
+
+  if (responseText) {
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error("API returned a non-JSON response:", {
+        endpoint,
+        status: response.status,
+        contentType: response.headers.get("content-type"),
+        responsePreview: responseText.slice(0, 300),
+      });
+
+      throw new Error(
+        `Invalid API response (HTTP ${response.status}). Check the API URL and server logs.`,
+      );
+    }
+  }
 
   if (!response.ok) {
-    const error = new Error(data.message || "Something went wrong");
+    const error = new Error(
+      data.message || `Request failed (HTTP ${response.status})`,
+    );
 
+    error.statusCode = response.status;
     error.errors = data.errors || [];
 
     throw error;

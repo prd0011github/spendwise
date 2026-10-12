@@ -66,26 +66,28 @@ const editTransaction = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: transaction,
     });
   } catch (error) {
-    console.error("Update transaction error:", error.message);
+    console.error("Update transaction error:", error);
 
-    if (error.name === "ValidationError") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid transaction data",
+    const statusCode =
+      error.statusCode ||
+      (error.name === "ValidationError" || error.name === "CastError"
+        ? 400
+        : 500);
+
+    return res.status(statusCode).json({
+      success: false,
+      message:
+        statusCode < 500 ? error.message : "Failed to update transaction",
+      ...(error.name === "ValidationError" && {
         errors: Object.values(error.errors).map(
           (validationError) => validationError.message,
         ),
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to update transaction",
+      }),
     });
   }
 };
@@ -101,16 +103,20 @@ const removeTransaction = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Transaction deleted successfully",
     });
   } catch (error) {
-    console.error("Delete transaction error:", error.message);
+    console.error("Delete transaction error:", error);
 
-    res.status(500).json({
+    const statusCode =
+      error.statusCode || (error.name === "CastError" ? 400 : 500);
+
+    return res.status(statusCode).json({
       success: false,
-      message: "Failed to delete transaction",
+      message:
+        statusCode < 500 ? error.message : "Failed to delete transaction",
     });
   }
 };

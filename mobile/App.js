@@ -650,6 +650,8 @@ function App() {
       today.getMonth() + 1,
     ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
     const localTransaction = {
       id: `local_${Date.now()}`,
       name: expense.name.trim(),
@@ -658,6 +660,7 @@ function App() {
       date: transactionDate,
       isPendingSync: true,
       syncAction: "create",
+      timeZone,
     };
 
     // Add transaction immediately to UI
@@ -688,6 +691,7 @@ function App() {
           amount: expense.amount,
           category: expense.category,
           date: transactionDate,
+          timeZone,
         });
 
         // Replace local transaction with server transaction

@@ -139,6 +139,9 @@ export const syncPendingTransactions = async (userId, token) => {
             amount: transaction.amount,
             category: transaction.category,
             date: transaction.date,
+            timeZone:
+              transaction.timeZone ||
+              Intl.DateTimeFormat().resolvedOptions().timeZone,
           });
 
           syncedTransactions.push({
