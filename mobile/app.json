@@ -11,14 +11,31 @@
       "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "package": "com.anonymous.mobile"
-    },
+  "package": "com.spendwise.app",
+  "adaptiveIcon": {
+    "backgroundColor": "#E6F4FE",
+    "foregroundImage": "./assets/android-icon-foreground.png",
+    "backgroundImage": "./assets/android-icon-background.png",
+    "monochromeImage": "./assets/android-icon-monochrome.png"
+  },
+  "intentFilters": [
+    {
+      "action": "VIEW",
+      "autoVerify": true,
+      "data": [
+        {
+          "scheme": "https",
+          "host": "spendwiseapp.site",
+          "pathPrefix": "/reset-password"
+        }
+      ],
+      "category": [
+        "BROWSABLE",
+        "DEFAULT"
+      ]
+    }
+  ]
+},
     "web": {
       "favicon": "./assets/favicon.png"
     },

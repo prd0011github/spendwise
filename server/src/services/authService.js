@@ -85,7 +85,7 @@ const requestPasswordReset = async (email) => {
 
   await user.save();
 
-  const resetUrl = `spendwise://reset-password?token=${resetToken}`;
+  const resetUrl = `https://spendwiseapp.site/reset-password?token=${resetToken}`;
 
   await sendPasswordResetEmail(user.email, resetUrl);
 };
