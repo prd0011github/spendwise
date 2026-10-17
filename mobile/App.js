@@ -354,6 +354,8 @@ function App() {
   const handleLogout = async () => {
     await logout();
     setUser(null);
+    setResetPasswordToken(null);
+    setShowForgotPassword(false);
     setShowRegister(false);
   };
 
@@ -780,27 +782,36 @@ function App() {
         return;
       }
 
-      const parsedUrl = Linking.parse(url);
+      try {
+        const parsedUrl = new URL(url);
 
-      if (
-        parsedUrl.path === "reset-password" ||
-        parsedUrl.hostname === "reset-password"
-      ) {
-        const token = parsedUrl.queryParams?.token;
+        const isResetPasswordLink =
+          parsedUrl.pathname.replace(/\/+$/, "") === "/reset-password" ||
+          parsedUrl.hostname === "reset-password";
 
-        if (typeof token === "string" && token.length > 0) {
+        if (!isResetPasswordLink) {
+          return;
+        }
+
+        const token = parsedUrl.searchParams.get("token");
+
+        if (token) {
           setResetPasswordToken(token);
           setShowForgotPassword(false);
           setShowRegister(false);
+        } else {
+          console.log("Reset link has no token");
         }
+      } catch (error) {
+        console.log("Invalid reset-password link:", error.message);
       }
     };
 
     Linking.getInitialURL().then(handleResetLink);
 
-    const subscription = Linking.addEventListener("url", ({ url }) =>
-      handleResetLink(url),
-    );
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      handleResetLink(url);
+    });
 
     return () => subscription.remove();
   }, []);
@@ -944,6 +955,11 @@ function App() {
       return (
         <ResetPasswordScreen
           token={resetPasswordToken}
+          onBack={() => {
+            setResetPasswordToken(null);
+            setShowForgotPassword(false);
+            setShowRegister(false);
+          }}
           onBackToLogin={() => {
             setResetPasswordToken(null);
             setShowForgotPassword(false);

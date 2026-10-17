@@ -11,7 +11,7 @@ import {
 
 import { resetPassword } from "../services/authService";
 
-export default function ResetPasswordScreen({ token, onBackToLogin }) {
+export default function ResetPasswordScreen({ onBack, token, onBackToLogin }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -119,6 +119,13 @@ export default function ResetPasswordScreen({ token, onBackToLogin }) {
                 <Text style={styles.primaryButtonText}>Reset Password</Text>
               )}
             </Pressable>
+            <Pressable
+              style={styles.backLink}
+              onPress={onBack}
+              disabled={loading}
+            >
+              <Text style={styles.backLinkText}>Back to Login</Text>
+            </Pressable>
           </>
         )}
       </View>
@@ -188,5 +195,16 @@ const styles = StyleSheet.create({
 
   disabledButton: {
     opacity: 0.6,
+  },
+
+  backLink: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+
+  backLinkText: {
+    color: "#2563EB",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
