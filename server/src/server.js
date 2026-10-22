@@ -28,7 +28,7 @@ app.get("/.well-known/assetlinks.json", (req, res) => {
         namespace: "android_app",
         package_name: "com.pradeepsingh.spendwise",
         sha256_cert_fingerprints: [
-          "F1:2B:59:10:27:EB:82:50:8E:DE:E4:B1:F3:77:43:8E:57:87:B1:D2:91:64:8A:C4:DB:21:8F:99:45:9E:27:BA",
+          "14:7A:4E:85:34:53:3A:79:95:CA:2E:DB:E4:CA:1D:D6:0C:AE:80:82:12:A9:84:91:90:0D:9F:46:D5:E8:D7:A1",
         ],
       },
     },
