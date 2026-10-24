@@ -34,6 +34,32 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+
+    subscription: {
+      plan: {
+        type: String,
+        enum: ["free", "pro"],
+        default: "free",
+      },
+      status: {
+        type: String,
+        enum: ["inactive", "active", "expired", "cancelled", "pending"],
+        default: "inactive",
+      },
+      billingProvider: {
+        type: String,
+        enum: ["google_play", "apple", "web", null],
+        default: null,
+      },
+      productId: {
+        type: String,
+        default: null,
+      },
+      expiresAt: {
+        type: Date,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,

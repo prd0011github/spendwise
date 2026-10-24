@@ -19,6 +19,7 @@ export default function TransactionItem({
   setEditingTransaction,
   setShowForm,
   isCurrentMonth,
+  customCategories = [],
 }) {
   const { colors, spacing, radius } = useTheme();
   const { formatAmount } = useCurrency();
@@ -133,7 +134,8 @@ export default function TransactionItem({
           >
             <View style={styles.transactionInfo}>
               <Text style={styles.transactionName}>
-                {getCategoryIcon(transaction.category)} {transaction.name}
+                {getCategoryIcon(transaction.category, customCategories)}{" "}
+                {transaction.name}
               </Text>
 
               <Text style={styles.categoryText}>

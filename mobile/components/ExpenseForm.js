@@ -7,13 +7,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import categoryIcons from "../utils/categoryUtils";
 import { useTheme } from "../context/ThemeContext";
-
-const categories = Object.keys(categoryIcons).map((name) => ({
-  name,
-  icon: categoryIcons[name],
-}));
 
 export default function ExpenseForm({
   visible,
@@ -21,6 +15,7 @@ export default function ExpenseForm({
   isSaving,
   onSave,
   onCancel,
+  categories,
 }) {
   const { colors, spacing, radius } = useTheme();
 

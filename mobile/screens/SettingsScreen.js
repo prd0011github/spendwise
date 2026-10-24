@@ -11,6 +11,8 @@ export default function SettingsScreen({
   onThemePress,
   onNotificationsPress,
   onAccountPress,
+  onProPress,
+  onManageCategories,
 }) {
   const { colors, spacing, typography, radius, themeMode } = useTheme();
 
@@ -94,6 +96,49 @@ export default function SettingsScreen({
         <Text style={styles.sectionTitle}>More</Text>
 
         <View style={styles.section}>
+          <Pressable
+            style={styles.settingRow}
+            onPress={onProPress}
+            accessibilityRole="button"
+            accessibilityLabel="SpendWise Pro, explore premium features"
+          >
+            <View style={styles.settingIcon}>
+              <Text style={styles.settingIconText}>★</Text>
+            </View>
+
+            <View style={styles.settingContent}>
+              <Text style={styles.settingTitle}>SpendWise Pro</Text>
+              <Text style={styles.settingSubtitle}>
+                Unlock premium features and insights
+              </Text>
+            </View>
+
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
+
+          <View style={styles.divider} />
+
+          <Pressable
+            style={styles.settingRow}
+            onPress={onManageCategories}
+            accessibilityRole="button"
+            accessibilityLabel="Manage custom categories"
+          >
+            <View style={styles.settingIcon}>
+              <Text style={styles.settingIconText}>🏷️</Text>
+            </View>
+
+            <View style={styles.settingContent}>
+              <Text style={styles.settingTitle}>Custom Categories</Text>
+              <Text style={styles.settingSubtitle}>
+                Create and manage your expense categories
+              </Text>
+            </View>
+
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
+
+          <View style={styles.divider} />
           <Pressable style={styles.settingRow} onPress={onNotificationsPress}>
             <View style={styles.settingIcon}>
               <Text style={styles.settingIconText}>🔔</Text>

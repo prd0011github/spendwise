@@ -19,6 +19,7 @@ import {
 } from "./services/notificationService";
 import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
 import ResetPasswordScreen from "./screens/ResetPasswordScreen";
+import ManageCategoriesScreen from "./screens/ManageCategoriesScreen";
 
 import TransactionItem from "./components/TransactionItem";
 import CategorySummary from "./components/categorySummary";
@@ -31,6 +32,7 @@ import TransactionSort from "./components/TransactionSort";
 import ModalComponent from "./components/Modal";
 import Analytics from "./components/Analytics";
 import SyncStatusIndicator from "./components/SyncStatusIndicator";
+import MonthSelector from "./components/monthSelector";
 
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
@@ -40,6 +42,7 @@ import SettingsScreen from "./screens/SettingsScreen";
 import NotificationSettingsScreen from "./screens/NotificationSettingsScreen";
 import AccountScreen from "./screens/AccountScreen";
 import ChangePasswordScreen from "./screens/ChangePasswordScreen";
+import SpendWiseProScreen from "./screens/SpendWiseProScreen";
 
 import { logout, restoreSession } from "./services/authService";
 import { deleteAccount } from "./services/api";
@@ -63,11 +66,17 @@ import {
   syncPendingBudget,
 } from "./services/budgetService";
 import { cancelDailyExpenseReminder } from "./services/notificationService";
+import {
+  getCustomCategories,
+  saveCustomCategories,
+} from "./services/categoryService";
 
 import { ThemeProvider } from "./context/ThemeContext";
 import { CurrencyProvider, useCurrency } from "./context/CurrencyContext";
 import { useTheme } from "./context/ThemeContext";
 import { clearUserData } from "./utils/clearUserData";
+import { isProUser } from "./utils/proAccess";
+import { categories as defaultCategories } from "./utils/categoryUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function App() {
@@ -97,6 +106,7 @@ function App() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showCurrency, setShowCurrency] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPro, setShowPro] = useState(false);
   const [showCurrencyFromSetting, setCurrencyFromSetting] = useState(false);
   const [showThemeFromSetting, setShowThemeFromSetting] = useState(false);
   const [showNotificationsFromSetting, setShowNotificationsFromSetting] =
@@ -105,6 +115,10 @@ function App() {
   const [showChangePassword, setShowChangePassword] = useState(false);
 
   const [syncStatus, setSyncStatus] = useState("synced");
+  const [showManageCategories, setShowManageCategories] = useState(false);
+  const [customCategories, setCustomCategories] = useState([]);
+  const [isCustomCategoriesLoaded, setIsCustomCategoriesLoaded] =
+    useState(false);
 
   const { colors, spacing, typography, radius } = useTheme();
   const {
@@ -129,6 +143,20 @@ function App() {
 
     return "Good evening";
   };
+
+  const hasProAccess = isProUser(user);
+
+  const allCategories = [
+    ...defaultCategories,
+    ...customCategories.filter(
+      (customCategory) =>
+        !defaultCategories.some(
+          (defaultCategory) =>
+            defaultCategory.name.toLowerCase() ===
+            customCategory.name.toLowerCase(),
+        ),
+    ),
+  ];
 
   const getMonthKey = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
@@ -816,6 +844,61 @@ function App() {
     return () => subscription.remove();
   }, []);
 
+  // custom categories
+  useEffect(() => {
+    let isActive = true;
+
+    const loadCategories = async () => {
+      setIsCustomCategoriesLoaded(false);
+
+      if (!user?.id) {
+        setCustomCategories([]);
+        setIsCustomCategoriesLoaded(true);
+        return;
+      }
+
+      try {
+        const storedCategories = await getCustomCategories(user.id);
+
+        if (isActive) {
+          setCustomCategories(storedCategories);
+        }
+      } catch (error) {
+        console.log("Failed to load custom categories:", error.message);
+      } finally {
+        if (isActive) {
+          setIsCustomCategoriesLoaded(true);
+        }
+      }
+    };
+
+    void loadCategories();
+
+    return () => {
+      isActive = false;
+    };
+  }, [user?.id]);
+
+  const handleSaveCustomCategories = async (updatedCategories) => {
+    if (!isProUser(user)) {
+      setShowPro(true);
+      return false;
+    }
+
+    if (!user?.id || !isCustomCategoriesLoaded) {
+      return false;
+    }
+
+    try {
+      await saveCustomCategories(user.id, updatedCategories);
+      setCustomCategories(updatedCategories);
+      return true;
+    } catch (error) {
+      console.log("Failed to save custom categories:", error.message);
+      return false;
+    }
+  };
+
   if (showForm || showBudgetForm) {
     return (
       <FormScreen
@@ -829,6 +912,7 @@ function App() {
         budget={budget}
         handleSaveBudget={handleSaveBudget}
         setShowBudgetForm={setShowBudgetForm}
+        categories={allCategories}
       />
     );
   }
@@ -840,6 +924,18 @@ function App() {
           await completeCurrencySetup(user.id);
           setShowCurrency(false);
         }}
+      />
+    );
+  }
+
+  if (showPro) {
+    return (
+      <SpendWiseProScreen
+        onBack={() => {
+          setShowPro(false);
+          setShowSettings(true);
+        }}
+        isPro={isProUser(user)}
       />
     );
   }
@@ -860,9 +956,36 @@ function App() {
           setShowSettings(false);
           setShowNotificationsFromSetting(true);
         }}
+        onProPress={() => {
+          setShowSettings(false);
+          setShowPro(true);
+        }}
+        onManageCategories={() => {
+          setShowSettings(false);
+          setShowManageCategories(true);
+        }}
         onAccountPress={() => {
           setShowSettings(false);
           setShowAccount(true);
+        }}
+      />
+    );
+  }
+  // Manage Category screen
+  if (showManageCategories) {
+    return (
+      <ManageCategoriesScreen
+        onBack={() => {
+          setShowManageCategories(false);
+          setShowSettings(true);
+        }}
+        isPro={isProUser(user)}
+        customCategories={customCategories}
+        defaultCategories={defaultCategories}
+        onSaveCategories={handleSaveCustomCategories}
+        onUpgradePress={() => {
+          setShowManageCategories(false);
+          setShowPro(true);
         }}
       />
     );
@@ -1068,37 +1191,35 @@ function App() {
         setShowThemeFromSetting={setShowThemeFromSetting}
         showThemeFromSetting={showThemeFromSetting}
         isCurrentMonth={isCurrentMonth}
+        hasProAccess={hasProAccess}
+        onUpgradePress={() => {
+          setShowPro(true);
+        }}
       />
       {showAnalytics ? (
         <Analytics
           setShowAnalytics={setShowAnalytics}
           transactions={transactionList}
           budget={budget}
+          previousMonth={previousMonth}
+          nextMonth={nextMonth}
+          selectedDate={selectedDate}
+          getMonthYear={getMonthYear}
+          onUpgradePress={() => {
+            setShowAnalytics(false);
+            setShowPro(true);
+          }}
+          hasProAccess={hasProAccess}
         />
       ) : (
         <>
           {/* Month selector*/}
-          <View style={styles.monthSelector}>
-            <Pressable
-              style={styles.monthButton}
-              onPress={previousMonth}
-              accessibilityRole="button"
-              accessibilityLabel="Previous month"
-            >
-              <Text style={styles.monthArrow}>‹</Text>
-            </Pressable>
-
-            <Text style={styles.monthText}>{getMonthYear(selectedDate)}</Text>
-
-            <Pressable
-              style={styles.monthButton}
-              onPress={nextMonth}
-              accessibilityRole="button"
-              accessibilityLabel="Next month"
-            >
-              <Text style={styles.monthArrow}>›</Text>
-            </Pressable>
-          </View>
+          <MonthSelector
+            previousMonth={previousMonth}
+            nextMonth={nextMonth}
+            selectedDate={selectedDate}
+            getMonthYear={getMonthYear}
+          />
           {/* Summary Card */}
           <View
             style={[
@@ -1208,6 +1329,7 @@ function App() {
             setSearchText={setSearchText}
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
+            categories={allCategories}
           />
           <TransactionSort
             selectedSort={selectedSort}
@@ -1224,10 +1346,21 @@ function App() {
             setEditingTransaction={setEditingTransaction}
             setShowForm={setShowForm}
             isCurrentMonth={isCurrentMonth}
+            customCategories={customCategories}
           />
-          <TopSpending transactions={monthlyTransactions} />
-          <CategorySummary transactions={monthlyTransactions} />
-          <MonthlySummary transactions={transactionList} />
+          {hasProAccess && (
+            <>
+              <TopSpending
+                transactions={monthlyTransactions}
+                customCategories={customCategories}
+              />
+              <CategorySummary
+                transactions={monthlyTransactions}
+                customCategories={customCategories}
+              />
+              <MonthlySummary transactions={transactionList} />
+            </>
+          )}
           <Pressable
             style={[styles.addButton, !isCurrentMonth && styles.disabledButton]}
             onPress={() => {
@@ -1404,39 +1537,5 @@ const createStyles = (colors, spacing, typography, radius) =>
 
     disabledButtonText: {
       opacity: 0.7,
-    },
-    // month selector style
-    monthSelector: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radius.lg,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.sm,
-      marginBottom: spacing.lg,
-    },
-
-    monthButton: {
-      width: 44,
-      height: 44,
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: radius.round,
-      backgroundColor: colors.primaryLight,
-    },
-
-    monthArrow: {
-      fontSize: 32,
-      lineHeight: 34,
-      color: colors.primary,
-      fontWeight: "400",
-    },
-
-    monthText: {
-      ...typography.heading,
-      color: colors.textPrimary,
     },
   });

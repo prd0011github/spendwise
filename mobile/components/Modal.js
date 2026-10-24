@@ -19,12 +19,32 @@ export default function ModalComponent({
   showThemeFromSetting,
   setShowThemeFromSetting,
   isCurrentMonth,
+  hasProAccess,
+  onUpgradePress,
 }) {
-  const { colors, themeMode, updateTheme } = useTheme();
+  const {
+    colors,
+    themeMode,
+    updateTheme,
+    themePalette,
+    themePalettes,
+    updateThemePalette,
+  } = useTheme();
   const { setCurrency } = useCurrency();
 
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+
+  const handleProFeature = (callback) => {
+    setShowMenu(false);
+
+    if (!hasProAccess) {
+      onUpgradePress?.();
+      return;
+    }
+
+    callback?.();
+  };
 
   return (
     <>
@@ -77,7 +97,7 @@ export default function ModalComponent({
               style={styles.menuItem}
               onPress={() => {
                 setShowMenu(false);
-                onExport();
+                handleProFeature(onExport);
               }}
             >
               <Text style={styles.menuIcon}>📤</Text>
@@ -92,7 +112,7 @@ export default function ModalComponent({
               style={styles.menuItem}
               onPress={() => {
                 setShowMenu(false);
-                onPrintReport();
+                handleProFeature(onPrintReport);
               }}
             >
               <Text style={styles.menuIcon}>🖨️</Text>
@@ -325,6 +345,87 @@ export default function ModalComponent({
                 </Text>
               )}
             </Pressable>
+
+            <View style={{ marginTop: 12, marginBottom: 8 }}>
+              <Text
+                style={{
+                  color: colors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: "600",
+                  marginBottom: 10,
+                  marginLeft: 18,
+                }}
+              >
+                PERSONALIZED THEMES · PRO
+              </Text>
+
+              {Object.entries(themePalettes).map(([paletteKey, palette]) => {
+                const paletteColors = palette.light;
+
+                return (
+                  <Pressable
+                    key={paletteKey}
+                    style={[
+                      styles.themeOption,
+                      themePalette === paletteKey && {
+                        backgroundColor: colors.primaryLight,
+                      },
+                      {
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      },
+                    ]}
+                    onPress={async () => {
+                      if (!hasProAccess) {
+                        setShowThemeModal(false);
+                        setShowThemeFromSetting(false);
+                        onUpgradePress?.();
+                        return;
+                      }
+
+                      await updateThemePalette(paletteKey);
+                      setShowThemeModal(false);
+                      setShowThemeFromSetting(false);
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 9,
+                          backgroundColor: paletteColors.primary,
+                        }}
+                      />
+
+                      <Text
+                        style={[
+                          styles.themeOptionText,
+                          { color: colors.textPrimary },
+                        ]}
+                      >
+                        {palette.label}
+                      </Text>
+                    </View>
+
+                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                      {hasProAccess
+                        ? themePalette === paletteKey
+                          ? "✓"
+                          : "Select"
+                        : "PRO"}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </Pressable>
         </Pressable>
       </Modal>

@@ -3,26 +3,24 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import AnalyticsExpenseOverview from "../components/AnalyticsExpenseOverview";
 import AnalyticsSpendingFlow from "../components/AnalyticsSpendingFlow";
 import AnalyticsInsights from "../components/AnalyticsInsights";
+import MonthSelector from "../components/monthSelector";
 
 import { useTheme } from "../context/ThemeContext";
 import { useCurrency } from "../context/CurrencyContext";
-
-const getMonthYear = (date) => {
-  return date.toLocaleString("default", {
-    month: "long",
-    year: "numeric",
-  });
-};
 
 export default function Analytics({
   setShowAnalytics,
   transactions = [],
   budget = 0,
+  previousMonth,
+  nextMonth,
+  selectedDate,
+  getMonthYear,
+  onUpgradePress,
+  hasProAccess,
 }) {
   const { colors, spacing, typography, radius } = useTheme();
   const { formatAmount } = useCurrency();
-
-  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const styles = createStyles(colors, spacing, typography, radius);
 
@@ -48,6 +46,37 @@ export default function Analytics({
     );
   }, [monthlyTransactions]);
 
+  const previousMonthTransactions = useMemo(() => {
+    const previousDate = new Date(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth() - 1,
+      1,
+    );
+
+    return transactions.filter((transaction) => {
+      const transactionDate = new Date(transaction.date);
+
+      return (
+        transactionDate.getFullYear() === previousDate.getFullYear() &&
+        transactionDate.getMonth() === previousDate.getMonth()
+      );
+    });
+  }, [transactions, selectedDate]);
+
+  const previousMonthExpense = useMemo(() => {
+    return previousMonthTransactions.reduce(
+      (total, transaction) => total + Number(transaction.amount || 0),
+      0,
+    );
+  }, [previousMonthTransactions]);
+
+  const spendingChange = totalExpense - previousMonthExpense;
+
+  const spendingChangePercentage =
+    previousMonthExpense > 0
+      ? (spendingChange / previousMonthExpense) * 100
+      : null;
+
   const budgetAmount = Number(budget || 0);
 
   const budgetDifference = budgetAmount - totalExpense;
@@ -57,22 +86,6 @@ export default function Analytics({
   const remainingBudget = Math.max(budgetDifference, 0);
 
   const overBudgetAmount = Math.max(-budgetDifference, 0);
-
-  const previousMonth = () => {
-    setSelectedDate((currentDate) => {
-      const newDate = new Date(currentDate);
-      newDate.setMonth(newDate.getMonth() - 1);
-      return newDate;
-    });
-  };
-
-  const nextMonth = () => {
-    setSelectedDate((currentDate) => {
-      const newDate = new Date(currentDate);
-      newDate.setMonth(newDate.getMonth() + 1);
-      return newDate;
-    });
-  };
 
   return (
     <ScrollView
@@ -92,18 +105,12 @@ export default function Analytics({
 
         <Text style={styles.title}>Analytics</Text>
       </View>
-
-      <View style={styles.monthSelector}>
-        <Pressable style={styles.monthButton} onPress={previousMonth}>
-          <Text style={styles.monthArrow}>‹</Text>
-        </Pressable>
-
-        <Text style={styles.monthText}>{getMonthYear(selectedDate)}</Text>
-
-        <Pressable style={styles.monthButton} onPress={nextMonth}>
-          <Text style={styles.monthArrow}>›</Text>
-        </Pressable>
-      </View>
+      <MonthSelector
+        previousMonth={previousMonth}
+        nextMonth={nextMonth}
+        selectedDate={selectedDate}
+        getMonthYear={getMonthYear}
+      />
 
       <View style={styles.summaryContainer}>
         <View style={styles.summaryItem}>
@@ -144,9 +151,72 @@ export default function Analytics({
         </View>
       </View>
 
+      {hasProAccess && (
+        <View style={styles.comparisonCard}>
+          <Text style={styles.comparisonTitle}>Month-over-month spending</Text>
+
+          <Text style={styles.comparisonAmount}>
+            {formatAmount(previousMonthExpense)}
+          </Text>
+
+          <Text style={styles.comparisonLabel}>Previous month</Text>
+
+          <Text
+            style={[
+              styles.comparisonChange,
+              {
+                color:
+                  spendingChange > 0
+                    ? colors.danger
+                    : spendingChange < 0
+                      ? colors.success
+                      : colors.textSecondary,
+              },
+            ]}
+          >
+            {spendingChangePercentage === null
+              ? "No previous-month spending to compare"
+              : `${Math.abs(spendingChangePercentage).toFixed(1)}% ${
+                  spendingChange > 0
+                    ? "more spent"
+                    : spendingChange < 0
+                      ? "less spent"
+                      : "no change"
+                } compared with the previous month`}
+          </Text>
+        </View>
+      )}
+
       <AnalyticsExpenseOverview transactions={monthlyTransactions} />
       <AnalyticsSpendingFlow transactions={monthlyTransactions} />
       <AnalyticsInsights transactions={monthlyTransactions} budget={budget} />
+      <View style={styles.proSection}>
+        <Text style={styles.proTitle}>Advanced analytics</Text>
+
+        {hasProAccess ? (
+          <View>
+            <Text style={styles.proDescription}>
+              Pro access is active. Advanced comparisons and category trends
+              will appear here.
+            </Text>
+          </View>
+        ) : (
+          <View>
+            <Text style={styles.proDescription}>
+              Unlock month-to-month comparisons, yearly spending trends, and
+              detailed category insights with SpendWise Pro.
+            </Text>
+
+            <Pressable
+              style={styles.proButton}
+              onPress={onUpgradePress}
+              accessibilityRole="button"
+            >
+              <Text style={styles.proButtonText}>Explore SpendWise Pro</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -189,40 +259,6 @@ const createStyles = (colors, spacing, typography, radius) =>
       fontWeight: "400",
     },
 
-    monthSelector: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radius.lg,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.sm,
-      marginBottom: spacing.lg,
-    },
-
-    monthButton: {
-      width: 44,
-      height: 44,
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: radius.round,
-      backgroundColor: colors.primaryLight,
-    },
-
-    monthArrow: {
-      fontSize: 32,
-      lineHeight: 34,
-      color: colors.primary,
-      fontWeight: "400",
-    },
-
-    monthText: {
-      ...typography.heading,
-      color: colors.textPrimary,
-    },
-
     summaryContainer: {
       flexDirection: "row",
       alignItems: "stretch",
@@ -257,5 +293,64 @@ const createStyles = (colors, spacing, typography, radius) =>
       fontSize: 16,
       fontWeight: "700",
       textAlign: "center",
+    },
+
+    proSection: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      marginTop: spacing.lg,
+    },
+    proTitle: {
+      ...typography.heading,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    proDescription: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginBottom: spacing.md,
+    },
+    proButton: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      alignItems: "center",
+    },
+    proButtonText: {
+      color: colors.onPrimary || "#FFFFFF",
+      fontWeight: "700",
+    },
+
+    comparisonCard: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      marginBottom: spacing.lg,
+    },
+    comparisonTitle: {
+      ...typography.heading,
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+    },
+    comparisonAmount: {
+      fontSize: 24,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    comparisonLabel: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+    comparisonChange: {
+      fontSize: 14,
+      fontWeight: "600",
+      marginTop: spacing.md,
     },
   });

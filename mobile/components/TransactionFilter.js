@@ -7,7 +7,6 @@ import {
   Pressable,
   ScrollView,
 } from "react-native";
-import { categories } from "../utils/categoryUtils";
 import { useTheme } from "../context/ThemeContext";
 
 export default function TransactionFilter({
@@ -15,6 +14,7 @@ export default function TransactionFilter({
   setSearchText,
   selectedCategory,
   setSelectedCategory,
+  categories,
 }) {
   const { colors, spacing, radius } = useTheme();
 

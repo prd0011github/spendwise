@@ -4,7 +4,7 @@ import { getCategoryIcon } from "../utils/categoryUtils";
 import { useTheme } from "../context/ThemeContext";
 import { useCurrency } from "../context/CurrencyContext";
 
-export default function TopSpending({ transactions }) {
+export default function TopSpending({ transactions, customCategories = [] }) {
   const { colors, spacing, radius } = useTheme();
   const { formatAmount } = useCurrency();
 
@@ -41,7 +41,9 @@ export default function TopSpending({ transactions }) {
       <Text style={styles.title}>💡 Top Spending</Text>
 
       <View style={styles.content}>
-        <Text style={styles.icon}>{getCategoryIcon(category)}</Text>
+        <Text style={styles.icon}>
+          {getCategoryIcon(category, customCategories)}
+        </Text>
 
         <View style={styles.info}>
           <Text style={styles.message}>You're spending the most on</Text>

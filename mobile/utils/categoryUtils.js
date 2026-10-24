@@ -16,7 +16,17 @@ export const categories = [
   { name: "Other", icon: "📦" },
 ];
 
-export const getCategoryIcon = (categoryName) =>
-  categoryIcons[categoryName] || categoryIcons.Other;
+export const getCategoryIcon = (categoryName, customCategories = []) => {
+  const customCategory = customCategories.find(
+    (category) =>
+      category.name.toLowerCase() === String(categoryName || "").toLowerCase(),
+  );
+
+  if (customCategory?.icon) {
+    return customCategory.icon;
+  }
+
+  return categoryIcons[categoryName] || categoryIcons.Other;
+};
 
 export default categoryIcons;

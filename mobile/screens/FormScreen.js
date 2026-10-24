@@ -17,6 +17,7 @@ export default function FormScreen(props) {
     budget,
     handleSaveBudget,
     setShowBudgetForm,
+    categories,
   } = props;
 
   const { colors, spacing, typography, radius } = useTheme();
@@ -61,6 +62,7 @@ export default function FormScreen(props) {
             setEditingTransactionId(null);
             setEditingTransaction(null);
           }}
+          categories={categories}
         />
       )}
 

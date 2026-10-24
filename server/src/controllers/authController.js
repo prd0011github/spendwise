@@ -89,6 +89,11 @@ const getMe = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        subscription: {
+          plan: user.subscription?.plan || "free",
+          status: user.subscription?.status || "inactive",
+          expiresAt: user.subscription?.expiresAt || null,
+        },
       },
     });
   } catch (error) {

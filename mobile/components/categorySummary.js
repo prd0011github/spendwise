@@ -4,7 +4,10 @@ import { getCategoryIcon } from "../utils/categoryUtils";
 import { useTheme } from "../context/ThemeContext";
 import { useCurrency } from "../context/CurrencyContext";
 
-export default function CategorySummary({ transactions }) {
+export default function CategorySummary({
+  transactions,
+  customCategories = [],
+}) {
   const { colors, spacing, radius } = useTheme();
   const { formatAmount } = useCurrency();
 
@@ -49,7 +52,7 @@ export default function CategorySummary({ transactions }) {
             <View style={styles.categoryHeader}>
               <View style={styles.categoryInfo}>
                 <Text style={styles.icon}>
-                  {getCategoryIcon(item.category)}
+                  {getCategoryIcon(item.category, customCategories)}
                 </Text>
 
                 <View>
