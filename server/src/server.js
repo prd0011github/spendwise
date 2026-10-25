@@ -10,6 +10,7 @@ const transactionRoutes = require("./routes/transactionRoutes");
 const budgetRoutes = require("./routes/budgetRoute");
 const authRoutes = require("./routes/authRoutes");
 const connectDatabase = require("./config/database");
+const subscriptionRoutes = require("./routes/subscriptionRoutes");
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use("/api/health", healthRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/budget", budgetRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
 
 app.get("/.well-known/assetlinks.json", (req, res) => {
   res.json([

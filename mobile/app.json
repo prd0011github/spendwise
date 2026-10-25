@@ -11,36 +11,37 @@
       "supportsTablet": true
     },
     "android": {
-  "package": "com.pradeepsingh.spendwise",
-  "adaptiveIcon": {
-    "backgroundColor": "#E6F4FE",
-    "foregroundImage": "./assets/android-icon-foreground.png",
-    "backgroundImage": "./assets/android-icon-background.png",
-    "monochromeImage": "./assets/android-icon-monochrome.png"
-  },
-  "intentFilters": [
-    {
-      "action": "VIEW",
-      "autoVerify": true,
-      "data": [
+      "package": "com.pradeepsingh.spendwise",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "intentFilters": [
         {
-          "scheme": "https",
-          "host": "spendwiseapp.site",
-          "pathPrefix": "/reset-password"
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "spendwiseapp.site",
+              "pathPrefix": "/reset-password"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
-      ],
-      "category": [
-        "BROWSABLE",
-        "DEFAULT"
       ]
-    }
-  ]
-},
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sharing"
+      "expo-sharing",
+      "expo-iap"
     ],
     "extra": {
       "eas": {

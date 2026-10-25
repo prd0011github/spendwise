@@ -55,6 +55,11 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: null,
       },
+      purchaseTokenHash: {
+        type: String,
+        default: null,
+        select: false,
+      },
       expiresAt: {
         type: Date,
         default: null,
