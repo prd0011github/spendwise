@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+﻿import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,8 +9,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useIAP } from "expo-iap";
 
 import { useTheme } from "../context/ThemeContext";
+import { verifyGoogleSubscription } from "../services/api";
+import { getAuthToken } from "../services/authStorage";
 
 const PRO_FEATURES = [
   {
@@ -30,37 +34,261 @@ const PRO_FEATURES = [
   },
 ];
 
-export default function SpendWiseProScreen({ onBack, isPro = false }) {
+const PRODUCTS = {
+  monthly: "spendwise_pro_monthly",
+  yearly: "spendwise_pro_yearly",
+};
+
+export default function SpendWiseProScreen({
+  onBack,
+  onSubscriptionVerified,
+  isPro = false,
+}) {
   const { colors, spacing, typography, radius } = useTheme();
 
   const [selectedPlan, setSelectedPlan] = useState("yearly");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+
+  const processedPurchases = useRef(new Set());
+  const verificationInProgress = useRef(false);
 
   const styles = createStyles(colors, spacing, typography, radius);
+
+  const showPurchaseError = useCallback((message) => {
+    console.log("message", message);
+    Alert.alert("SpendWise Pro", message, [{ text: "OK" }]);
+  }, []);
+
+  const handlePurchaseSuccess = useCallback(
+    async (purchase) => {
+      const productId = purchase.productId;
+      const purchaseToken =
+        purchase.purchaseTokenAndroid || purchase.purchaseToken;
+
+      const purchaseKey =
+        purchaseToken || purchase.transactionId || `${productId}`;
+
+      if (
+        verificationInProgress.current ||
+        processedPurchases.current.has(purchaseKey)
+      ) {
+        return;
+      }
+
+      if (!productId || !purchaseToken) {
+        showPurchaseError(
+          "Google Play did not return the required purchase details. Please try again.",
+        );
+        return;
+      }
+
+      verificationInProgress.current = true;
+      setIsProcessing(true);
+
+      try {
+        const token = await getAuthToken();
+
+        if (!token) {
+          throw new Error("Please log in again before upgrading to Pro.");
+        }
+
+        await verifyGoogleSubscription(token, productId, purchaseToken);
+
+        // Complete the store transaction only after backend verification succeeds.
+        await finishTransaction({
+          purchase,
+          isConsumable: false,
+        });
+
+        processedPurchases.current.add(purchaseKey);
+
+        // Refresh the UI separately. A refresh failure does not mean
+        // that Google Play verification failed.
+        let refreshFailed = false;
+
+        try {
+          if (onSubscriptionVerified) {
+            await onSubscriptionVerified();
+          }
+        } catch (refreshError) {
+          refreshFailed = true;
+          console.error("Failed to refresh the SpendWise user:", refreshError);
+        }
+
+        Alert.alert(
+          "SpendWise Pro",
+          refreshFailed
+            ? "Your subscription has been verified. Reopen SpendWise or sign in again to refresh your Pro status."
+            : "Your subscription has been verified and your Pro benefits are ready.",
+          [
+            {
+              text: "OK",
+              onPress: onBack,
+            },
+          ],
+        );
+      } catch (error) {
+        console.error("SpendWise Pro verification failed:", error);
+
+        showPurchaseError(
+          error.message ||
+            "We couldn't verify your subscription. Your Pro access has not been changed. Please try again.",
+        );
+      } finally {
+        verificationInProgress.current = false;
+        setIsProcessing(false);
+      }
+    },
+    [onBack, onSubscriptionVerified, showPurchaseError],
+  );
+
+  const handlePurchaseError = useCallback(
+    (error) => {
+      const code = String(error?.code || "").toLowerCase();
+
+      if (code.includes("cancel") || code.includes("user-cancel")) {
+        return;
+      }
+
+      console.error("Google Play purchase error:", error);
+
+      showPurchaseError(
+        error?.message ||
+          "Google Play couldn't start the purchase. Please try again.",
+      );
+    },
+    [showPurchaseError],
+  );
+
+  const handleIapError = useCallback((error) => {
+    console.warn("Google Play Billing error:", error?.message || error);
+  }, []);
+
+  const {
+    connected,
+    subscriptions,
+    fetchProducts,
+    requestPurchase,
+    finishTransaction,
+  } = useIAP({
+    onPurchaseSuccess: handlePurchaseSuccess,
+    onPurchaseError: handlePurchaseError,
+    onError: handleIapError,
+  });
+
+  useEffect(() => {
+    if (!connected) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadProducts = async () => {
+      setIsLoadingProducts(true);
+
+      try {
+        await fetchProducts({
+          skus: Object.values(PRODUCTS),
+          type: "subs",
+        });
+      } catch (error) {
+        console.warn("Unable to load Pro subscriptions:", error?.message);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingProducts(false);
+        }
+      }
+    };
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [connected, fetchProducts]);
 
   const plans = [
     {
       id: "monthly",
+      productId: PRODUCTS.monthly,
       title: "Monthly",
-      price: "₹99",
+      fallbackPrice: "â‚¹49",
       period: "/ month",
       detail: "Billed monthly",
     },
     {
       id: "yearly",
+      productId: PRODUCTS.yearly,
       title: "Yearly",
-      price: "₹799",
+      fallbackPrice: "â‚¹499",
       period: "/ year",
-      detail: "About ₹67 per month",
+      detail: "About â‚¹42 per month",
       badge: "BEST VALUE",
     },
   ];
 
-  const handleUpgrade = () => {
-    Alert.alert(
-      "Coming soon",
-      "SpendWise Pro payments are not available yet. Your current plan has not been changed.",
-      [{ text: "OK" }],
+  const handleUpgrade = async () => {
+    if (isProcessing || isLoadingProducts) {
+      return;
+    }
+
+    if (!connected) {
+      showPurchaseError(
+        "Google Play Billing isn't connected yet. Please check your internet connection and try again.",
+      );
+      return;
+    }
+
+    const selected = plans.find((plan) => plan.id === selectedPlan);
+    const product = subscriptions.find(
+      (item) => item.id === selected?.productId,
     );
+
+    if (!selected || !product) {
+      showPurchaseError(
+        "This subscription isn't available from Google Play yet. Please try again after the subscription products are published for testing.",
+      );
+      return;
+    }
+
+    const offers = (product.subscriptionOffers || []).filter(
+      (offer) => offer.basePlanIdAndroid && offer.offerTokenAndroid,
+    );
+
+    const matchingBasePlan = offers.find((offer) =>
+      selectedPlan === "monthly"
+        ? offer.basePlanIdAndroid === "monthly-auto-renew"
+        : offer.basePlanIdAndroid === "yearly-annual",
+    );
+
+    const chosenOffer = matchingBasePlan || offers[0];
+
+    if (!chosenOffer?.offerTokenAndroid) {
+      showPurchaseError(
+        "Google Play hasn't returned a valid offer for this plan. Please try again later.",
+      );
+      return;
+    }
+
+    try {
+      await requestPurchase({
+        type: "subs",
+        request: {
+          google: {
+            skus: [selected.productId],
+            subscriptionOffers: [
+              {
+                sku: selected.productId,
+                offerToken: chosenOffer.offerTokenAndroid,
+              },
+            ],
+          },
+        },
+      });
+    } catch (error) {
+      handlePurchaseError(error);
+    }
   };
 
   return (
@@ -76,11 +304,10 @@ export default function SpendWiseProScreen({ onBack, isPro = false }) {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Text style={styles.backText}>{"‹"}</Text>
+            <Text style={styles.backText}>â€¹</Text>
           </Pressable>
 
           <Text style={styles.headerTitle}>SpendWise Pro</Text>
-
           <View style={styles.headerSpacer} />
         </View>
 
@@ -112,7 +339,7 @@ export default function SpendWiseProScreen({ onBack, isPro = false }) {
             <View key={feature.title}>
               <View style={styles.featureRow}>
                 <View style={styles.checkCircle}>
-                  <Text style={styles.checkText}>✓</Text>
+                  <Text style={styles.checkText}>âœ“</Text>
                 </View>
 
                 <View style={styles.featureContent}>
@@ -137,6 +364,10 @@ export default function SpendWiseProScreen({ onBack, isPro = false }) {
             <View style={styles.plansContainer}>
               {plans.map((plan) => {
                 const selected = selectedPlan === plan.id;
+                const product = subscriptions.find(
+                  (item) => item.id === plan.productId,
+                );
+                const price = product?.displayPrice || plan.fallbackPrice;
 
                 return (
                   <Pressable
@@ -148,7 +379,7 @@ export default function SpendWiseProScreen({ onBack, isPro = false }) {
                     onPress={() => setSelectedPlan(plan.id)}
                     accessibilityRole="radio"
                     accessibilityState={{ selected }}
-                    accessibilityLabel={`${plan.title}, ${plan.price} ${plan.period}`}
+                    accessibilityLabel={`${plan.title}, ${price} ${plan.period}`}
                   >
                     <View style={styles.planTopRow}>
                       <View
@@ -169,7 +400,7 @@ export default function SpendWiseProScreen({ onBack, isPro = false }) {
                     </View>
 
                     <View style={styles.priceRow}>
-                      <Text style={styles.planPrice}>{plan.price}</Text>
+                      <Text style={styles.planPrice}>{price}</Text>
                       <Text style={styles.planPeriod}>{plan.period}</Text>
                     </View>
 
@@ -180,19 +411,29 @@ export default function SpendWiseProScreen({ onBack, isPro = false }) {
             </View>
 
             <Pressable
-              style={styles.upgradeButton}
+              style={[
+                styles.upgradeButton,
+                (isProcessing || isLoadingProducts) &&
+                  styles.upgradeButtonDisabled,
+              ]}
               onPress={handleUpgrade}
+              disabled={isProcessing || isLoadingProducts}
               accessibilityRole="button"
               accessibilityLabel="Continue to SpendWise Pro upgrade"
             >
-              <Text style={styles.upgradeButtonText}>
-                Continue with {selectedPlan === "yearly" ? "Yearly" : "Monthly"}
-              </Text>
+              {isProcessing || isLoadingProducts ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.upgradeButtonText}>
+                  Continue with{" "}
+                  {selectedPlan === "yearly" ? "Yearly" : "Monthly"}
+                </Text>
+              )}
             </Pressable>
 
             <Text style={styles.disclaimer}>
-              Preview pricing only. No payment will be taken. Subscription terms
-              and billing will be available when Pro launches.
+              Subscriptions are processed by Google Play. Pricing, renewal, and
+              cancellation terms are shown during checkout.
             </Text>
           </>
         )}
@@ -201,8 +442,8 @@ export default function SpendWiseProScreen({ onBack, isPro = false }) {
           <View style={styles.activeCard}>
             <Text style={styles.activeTitle}>You're on Pro</Text>
             <Text style={styles.activeDescription}>
-              Enjoy your premium benefits. Subscription management will be
-              available when billing is integrated.
+              Enjoy your premium benefits. Your subscription is verified by
+              SpendWise.
             </Text>
           </View>
         )}
@@ -434,6 +675,9 @@ const createStyles = (colors, spacing, typography, radius) =>
       justifyContent: "center",
       paddingHorizontal: spacing.lg,
     },
+    upgradeButtonDisabled: {
+      opacity: 0.7,
+    },
     upgradeButtonText: {
       color: "#FFFFFF",
       fontSize: 16,
@@ -473,3 +717,4 @@ const createStyles = (colors, spacing, typography, radius) =>
       fontWeight: "700",
     },
   });
+

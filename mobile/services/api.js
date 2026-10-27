@@ -176,6 +176,19 @@ export const updateBudget = async (token, month, budget) => {
   });
 };
 
+export const verifyGoogleSubscription = (token, productId, purchaseToken) => {
+  return apiRequest("/subscriptions/google/verify", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      productId,
+      purchaseToken,
+    }),
+  });
+};
+
 export const checkHealth = async () => {
   return apiRequest("/health");
 };

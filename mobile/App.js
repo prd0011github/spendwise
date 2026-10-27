@@ -44,7 +44,11 @@ import AccountScreen from "./screens/AccountScreen";
 import ChangePasswordScreen from "./screens/ChangePasswordScreen";
 import SpendWiseProScreen from "./screens/SpendWiseProScreen";
 
-import { logout, restoreSession } from "./services/authService";
+import {
+  logout,
+  restoreSession,
+  refreshCurrentUser,
+} from "./services/authService";
 import { deleteAccount } from "./services/api";
 import {
   fetchTransactions,
@@ -936,6 +940,10 @@ function App() {
           setShowSettings(true);
         }}
         isPro={isProUser(user)}
+        onSubscriptionVerified={async () => {
+          const refreshedUser = await refreshCurrentUser();
+          setUser(refreshedUser);
+        }}
       />
     );
   }

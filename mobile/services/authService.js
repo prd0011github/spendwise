@@ -70,6 +70,19 @@ export const restoreSession = async () => {
   }
 };
 
+export const refreshCurrentUser = async () => {
+  const token = await getAuthToken();
+
+  if (!token) {
+    throw new Error("Please log in again to continue.");
+  }
+
+  const response = await getCurrentUser(token);
+  await saveAuthUser(response.data);
+
+  return response.data;
+};
+
 export const logout = async () => {
   await removeAuthToken();
 };
