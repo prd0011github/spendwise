@@ -83,7 +83,7 @@ import { isProUser } from "./utils/proAccess";
 import { categories as defaultCategories } from "./utils/categoryUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-function App() {
+function App({ onUserChange }) {
   const [showForm, setShowForm] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState(null);
   const [editingTransaction, setEditingTransaction] = useState(null);
@@ -133,6 +133,10 @@ function App() {
   } = useCurrency();
 
   const styles = createStyles(colors, spacing, typography, radius);
+
+  useEffect(() => {
+    onUserChange(user?.id ?? null);
+  }, [user?.id, onUserChange]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -1401,11 +1405,13 @@ function App() {
   );
 }
 
-export default function AppWithTheme() {
+export default function AppWithThemeBridge() {
+  const [userId, setUserId] = useState(null);
+
   return (
-    <ThemeProvider>
+    <ThemeProvider userId={userId}>
       <CurrencyProvider>
-        <App />
+        <App onUserChange={setUserId} />
       </CurrencyProvider>
     </ThemeProvider>
   );

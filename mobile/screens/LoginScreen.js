@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { login } from "../services/authService";
 
@@ -14,6 +15,7 @@ export default function LoginScreen({ onLogin, onRegister, onForgotPassword }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -60,13 +62,36 @@ export default function LoginScreen({ onLogin, onRegister, onForgotPassword }) {
 
         <Text style={styles.label}>Password</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Enter your password"
+            placeholderTextColor="#94A3B8"
+            selectionColor="#2563EB"
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={setPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <Pressable
+            onPress={() => setShowPassword((visible) => !visible)}
+            style={styles.eyeButton}
+            accessibilityRole="button"
+            accessibilityLabel={
+              showPassword ? "Hide password" : "Show password"
+            }
+            hitSlop={8}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={22}
+              color="#475569"
+            />
+          </Pressable>
+        </View>
+
         <Pressable style={styles.forgotPasswordLink} onPress={onForgotPassword}>
           <Text style={styles.forgotPasswordLinkText}>Forgot Password?</Text>
         </Pressable>
@@ -131,6 +156,30 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 16,
     marginBottom: 18,
+  },
+
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    marginBottom: 18,
+  },
+
+  passwordInput: {
+    flex: 1,
+    color: "#0F172A",
+    padding: 14,
+    fontSize: 16,
+  },
+
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   loginButton: {

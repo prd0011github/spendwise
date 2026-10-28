@@ -7,6 +7,9 @@ import theme from "../utils/theme";
 const THEME_KEY = "@spendwise_theme";
 const THEME_PALETTE_KEY = "@spendwise_theme_palette";
 
+const DEFAULT_THEME = "system";
+const DEFAULT_PALETTE = "violet";
+
 const ThemeContext = createContext(null);
 
 const { lightColors, darkColors, spacing, radius, typography, shadows } = theme;
@@ -66,44 +69,83 @@ export const THEME_PALETTES = {
   },
 };
 
-const ThemeProvider = ({ children }) => {
+const getUserThemeKey = (key, userId) => (userId ? `${key}_${userId}` : null);
+
+const ThemeProvider = ({ children, userId = null }) => {
   const systemTheme = useColorScheme();
 
-  const [themeMode, setThemeMode] = useState("system");
-  const [themePalette, setThemePalette] = useState("violet");
+  const [themeMode, setThemeMode] = useState(DEFAULT_THEME);
+  const [themePalette, setThemePalette] = useState(DEFAULT_PALETTE);
   const [isThemeLoaded, setIsThemeLoaded] = useState(false);
 
   useEffect(() => {
-    const loadTheme = async () => {
-      try {
-        const [savedTheme, savedPalette] = await Promise.all([
-          AsyncStorage.getItem(THEME_KEY),
-          AsyncStorage.getItem(THEME_PALETTE_KEY),
-        ]);
+    let cancelled = false;
 
-        if (
-          savedTheme === "light" ||
-          savedTheme === "dark" ||
-          savedTheme === "system"
-        ) {
-          setThemeMode(savedTheme);
+    const loadTheme = async () => {
+      setIsThemeLoaded(false);
+      setThemeMode(DEFAULT_THEME);
+      setThemePalette(DEFAULT_PALETTE);
+
+      try {
+        if (!userId) {
+          return;
         }
 
-        if (
-          savedPalette &&
-          Object.prototype.hasOwnProperty.call(THEME_PALETTES, savedPalette)
+        const modeKey = getUserThemeKey(THEME_KEY, userId);
+        const paletteKey = getUserThemeKey(THEME_PALETTE_KEY, userId);
+
+        const [savedTheme, savedPalette, legacyTheme, legacyPalette] =
+          await Promise.all([
+            AsyncStorage.getItem(modeKey),
+            AsyncStorage.getItem(paletteKey),
+            AsyncStorage.getItem(THEME_KEY),
+            AsyncStorage.getItem(THEME_PALETTE_KEY),
+          ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        const validMode = ["light", "dark", "system"].includes(savedTheme);
+        const validPalette = Object.prototype.hasOwnProperty.call(
+          THEME_PALETTES,
+          savedPalette,
+        );
+
+        if (validMode) {
+          setThemeMode(savedTheme);
+        } else if (
+          legacyTheme &&
+          ["light", "dark", "system"].includes(legacyTheme)
         ) {
+          setThemeMode(legacyTheme);
+          await AsyncStorage.setItem(modeKey, legacyTheme);
+        }
+
+        if (validPalette) {
           setThemePalette(savedPalette);
+        } else if (
+          legacyPalette &&
+          Object.prototype.hasOwnProperty.call(THEME_PALETTES, legacyPalette)
+        ) {
+          setThemePalette(legacyPalette);
+          await AsyncStorage.setItem(paletteKey, legacyPalette);
         }
       } catch (error) {
         console.log("Error loading theme:", error.message);
       } finally {
-        setIsThemeLoaded(true);
+        if (!cancelled) {
+          setIsThemeLoaded(true);
+        }
       }
     };
 
     loadTheme();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const updateTheme = async (mode) => {
     if (!["light", "dark", "system"].includes(mode)) {
@@ -111,7 +153,9 @@ const ThemeProvider = ({ children }) => {
     }
 
     try {
-      await AsyncStorage.setItem(THEME_KEY, mode);
+      if (userId) {
+        await AsyncStorage.setItem(getUserThemeKey(THEME_KEY, userId), mode);
+      }
       setThemeMode(mode);
     } catch (error) {
       console.log("Error saving theme:", error.message);
@@ -124,7 +168,12 @@ const ThemeProvider = ({ children }) => {
     }
 
     try {
-      await AsyncStorage.setItem(THEME_PALETTE_KEY, palette);
+      if (userId) {
+        await AsyncStorage.setItem(
+          getUserThemeKey(THEME_PALETTE_KEY, userId),
+          palette,
+        );
+      }
       setThemePalette(palette);
     } catch (error) {
       console.log("Error saving theme palette:", error.message);

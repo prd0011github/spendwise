@@ -41,7 +41,8 @@
     },
     "plugins": [
       "expo-sharing",
-      "expo-iap"
+      "expo-iap",
+      "expo-font"
     ],
     "extra": {
       "eas": {

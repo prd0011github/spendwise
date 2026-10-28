@@ -18,9 +18,17 @@ export const login = async (email, password) => {
   const response = await loginUser(email, password);
 
   await saveAuthToken(response.data.token);
-  await saveAuthUser(response.data.user);
 
-  return response.data;
+  // Fetch the latest user profile, including the current Pro entitlement.
+  const currentUserResponse = await getCurrentUser(response.data.token);
+  const currentUser = currentUserResponse.data;
+
+  await saveAuthUser(currentUser);
+
+  return {
+    ...response.data,
+    user: currentUser,
+  };
 };
 
 export const register = async (name, email, password) => {

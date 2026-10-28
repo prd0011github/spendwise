@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   ActivityIndicator,
@@ -304,7 +304,7 @@ export default function SpendWiseProScreen({
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Text style={styles.backText}>â€¹</Text>
+            <Text style={styles.backText}>‹</Text>
           </Pressable>
 
           <Text style={styles.headerTitle}>SpendWise Pro</Text>
@@ -339,7 +339,7 @@ export default function SpendWiseProScreen({
             <View key={feature.title}>
               <View style={styles.featureRow}>
                 <View style={styles.checkCircle}>
-                  <Text style={styles.checkText}>âœ“</Text>
+                  <Text style={styles.checkText}>✓</Text>
                 </View>
 
                 <View style={styles.featureContent}>
@@ -717,4 +717,3 @@ const createStyles = (colors, spacing, typography, radius) =>
       fontWeight: "700",
     },
   });
-

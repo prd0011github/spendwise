@@ -8,12 +8,15 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { resetPassword } from "../services/authService";
 
 export default function ResetPasswordScreen({ onBack, token, onBackToLogin }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetCompleted, setResetCompleted] = useState(false);
 
@@ -84,29 +87,73 @@ export default function ResetPasswordScreen({ onBack, token, onBackToLogin }) {
 
             <Text style={styles.label}>New Password</Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Enter new password"
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              editable={!loading}
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter new password"
+                placeholderTextColor="#94A3B8"
+                selectionColor="#2563EB"
+                secureTextEntry={!showNewPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                editable={!loading}
+              />
+
+              <Pressable
+                onPress={() => setShowNewPassword((visible) => !visible)}
+                style={styles.eyeButton}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showNewPassword ? "Hide password" : "Show password"
+                }
+                hitSlop={8}
+                disabled={loading}
+              >
+                <Ionicons
+                  name={showNewPassword ? "eye-off-outline" : "eye-outline"}
+                  size={22}
+                  color="#475569"
+                />
+              </Pressable>
+            </View>
 
             <Text style={styles.label}>Confirm Password</Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm new password"
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              editable={!loading}
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Confirm new password"
+                placeholderTextColor="#94A3B8"
+                selectionColor="#2563EB"
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                editable={!loading}
+              />
+
+              <Pressable
+                onPress={() => setShowConfirmPassword((visible) => !visible)}
+                style={styles.eyeButton}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showConfirmPassword
+                    ? "Hide confirm password"
+                    : "Show confirm password"
+                }
+                hitSlop={8}
+                disabled={loading}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                  size={22}
+                  color="#475569"
+                />
+              </Pressable>
+            </View>
 
             <Pressable
               style={[styles.primaryButton, loading && styles.disabledButton]}
@@ -170,14 +217,28 @@ const styles = StyleSheet.create({
     color: "#0F172A",
   },
 
-  input: {
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: "#CBD5E1",
     borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    marginBottom: 20,
+  },
+
+  passwordInput: {
+    flex: 1,
+    color: "#0F172A",
     padding: 14,
     fontSize: 16,
-    marginBottom: 20,
-    color: "#0F172A",
+  },
+
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   primaryButton: {
