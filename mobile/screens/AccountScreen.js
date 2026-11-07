@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useTheme } from "../context/ThemeContext";
@@ -152,7 +152,11 @@ export default function AccountScreen({
         visible={showDeleteConfirmation}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowDeleteConfirmation(false)}
+        onRequestClose={() => {
+          if (!isDeleting) {
+            setShowDeleteConfirmation(false);
+          }
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -163,9 +167,24 @@ export default function AccountScreen({
               budget data. This action cannot be undone.
             </Text>
 
+            <View style={styles.subscriptionWarningContainer}>
+              <Text style={styles.subscriptionWarningTitle}>
+                Google Play Subscriptions
+              </Text>
+              <Text style={styles.subscriptionWarningText}>
+                Deleting your SpendWise account will not automatically cancel
+                any active Google Play subscriptions. Please cancel your
+                subscription in Google Play to avoid future charges.
+              </Text>
+            </View>
+
             <View style={styles.modalActions}>
               <Pressable
-                style={styles.cancelButton}
+                style={[
+                  styles.cancelButton,
+                  isDeleting && styles.buttonDisabled,
+                ]}
+                disabled={isDeleting}
                 onPress={() => setShowDeleteConfirmation(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -183,6 +202,13 @@ export default function AccountScreen({
                   try {
                     await onDeleteAccount();
                     setShowDeleteConfirmation(false);
+                  } catch (error) {
+                    console.error("Account deletion failed:", error);
+                    Alert.alert(
+                      "Deletion Failed",
+                      error?.message ||
+                        "Unable to delete your account right now. Please check your connection and try again.",
+                    );
                   } finally {
                     setIsDeleting(false);
                   }
@@ -380,6 +406,28 @@ const createStyles = (colors, spacing, typography, radius) =>
       ...typography.body,
       lineHeight: 22,
       marginTop: spacing.md,
+    },
+
+    subscriptionWarningContainer: {
+      backgroundColor: colors.warningLight,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      marginTop: spacing.md,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.warning,
+    },
+
+    subscriptionWarningTitle: {
+      color: colors.textPrimary,
+      ...typography.bodyMedium,
+      fontWeight: "700",
+      marginBottom: spacing.xs,
+    },
+
+    subscriptionWarningText: {
+      color: colors.textSecondary,
+      ...typography.caption,
+      lineHeight: 18,
     },
 
     modalActions: {

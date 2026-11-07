@@ -83,7 +83,7 @@ import { isProUser } from "./utils/proAccess";
 import { categories as defaultCategories } from "./utils/categoryUtils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-function App({ onUserChange }) {
+function App({ user, setUser }) {
   const [showForm, setShowForm] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState(null);
   const [editingTransaction, setEditingTransaction] = useState(null);
@@ -100,7 +100,6 @@ function App({ onUserChange }) {
   const [transactionList, setTransactionList] = useState([]);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
 
-  const [user, setUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [showRegister, setShowRegister] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -124,7 +123,7 @@ function App({ onUserChange }) {
   const [isCustomCategoriesLoaded, setIsCustomCategoriesLoaded] =
     useState(false);
 
-  const { colors, spacing, typography, radius } = useTheme();
+  const { colors, spacing, typography, radius, isThemeLoaded } = useTheme();
   const {
     loadUserCurrency,
     isCurrencySetupCompleted,
@@ -133,10 +132,6 @@ function App({ onUserChange }) {
   } = useCurrency();
 
   const styles = createStyles(colors, spacing, typography, radius);
-
-  useEffect(() => {
-    onUserChange(user?.id ?? null);
-  }, [user?.id, onUserChange]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -388,11 +383,14 @@ function App({ onUserChange }) {
 
   // Logout handler
   const handleLogout = async () => {
-    await logout();
-    setUser(null);
-    setResetPasswordToken(null);
-    setShowForgotPassword(false);
-    setShowRegister(false);
+    try {
+      await logout();
+    } finally {
+      setUser(null);
+      setResetPasswordToken(null);
+      setShowForgotPassword(false);
+      setShowRegister(false);
+    }
   };
 
   // Authentication restoration
@@ -1045,16 +1043,23 @@ function App({ onUserChange }) {
           // Delete account and server data first
           await deleteAccount(token);
 
-          // Cancel the user's scheduled daily reminder
-          await cancelDailyExpenseReminder(userId);
+          // Once the server deletion succeeds, clean up local data and log out
+          try {
+            // Cancel the user's scheduled daily reminder
+            await cancelDailyExpenseReminder(userId);
 
-          // Remove all user-specific local data
-          await clearUserData(userId);
-
-          // Use the existing logout flow
-          await handleLogout();
-
-          setShowAccount(false);
+            // Remove all user-specific local data
+            await clearUserData(userId);
+          } catch (localCleanupError) {
+            console.warn(
+              "Failed to complete local cleanup after account deletion:",
+              localCleanupError?.message || localCleanupError,
+            );
+          } finally {
+            // Always complete local logout so user is not trapped in a deleted account
+            await handleLogout();
+            setShowAccount(false);
+          }
         }}
       />
     );
@@ -1071,7 +1076,7 @@ function App({ onUserChange }) {
     );
   }
 
-  if (isAuthLoading) {
+  if (isAuthLoading || !isThemeLoaded) {
     return (
       <View style={styles.loadingContainer}>
         <Text>Loading...</Text>
@@ -1406,12 +1411,14 @@ function App({ onUserChange }) {
 }
 
 export default function AppWithThemeBridge() {
-  const [userId, setUserId] = useState(null);
+  const [user, setUser] = useState(null);
+
+  const isPro = isProUser(user);
 
   return (
-    <ThemeProvider userId={userId}>
+    <ThemeProvider userId={user?.id ?? null} isPro={isPro}>
       <CurrencyProvider>
-        <App onUserChange={setUserId} />
+        <App user={user} setUser={setUser} />
       </CurrencyProvider>
     </ThemeProvider>
   );

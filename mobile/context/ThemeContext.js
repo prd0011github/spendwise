@@ -71,7 +71,7 @@ export const THEME_PALETTES = {
 
 const getUserThemeKey = (key, userId) => (userId ? `${key}_${userId}` : null);
 
-const ThemeProvider = ({ children, userId = null }) => {
+const ThemeProvider = ({ children, userId = null, isPro = false }) => {
   const systemTheme = useColorScheme();
 
   const [themeMode, setThemeMode] = useState(DEFAULT_THEME);
@@ -122,14 +122,24 @@ const ThemeProvider = ({ children, userId = null }) => {
           await AsyncStorage.setItem(modeKey, legacyTheme);
         }
 
-        if (validPalette) {
+        if (isPro && validPalette) {
           setThemePalette(savedPalette);
-        } else if (
-          legacyPalette &&
-          Object.prototype.hasOwnProperty.call(THEME_PALETTES, legacyPalette)
-        ) {
-          setThemePalette(legacyPalette);
-          await AsyncStorage.setItem(paletteKey, legacyPalette);
+          await AsyncStorage.removeItem(THEME_PALETTE_KEY);
+        } else if (isPro && !savedPalette && legacyPalette) {
+          const isValidLegacyPalette = Object.prototype.hasOwnProperty.call(
+            THEME_PALETTES,
+            legacyPalette,
+          );
+
+          if (isValidLegacyPalette) {
+            await AsyncStorage.setItem(paletteKey, legacyPalette);
+
+            if (!cancelled) {
+              setThemePalette(legacyPalette);
+            }
+          }
+
+          await AsyncStorage.removeItem(THEME_PALETTE_KEY);
         }
       } catch (error) {
         console.log("Error loading theme:", error.message);
@@ -145,7 +155,7 @@ const ThemeProvider = ({ children, userId = null }) => {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, isPro]);
 
   const updateTheme = async (mode) => {
     if (!["light", "dark", "system"].includes(mode)) {
@@ -163,6 +173,10 @@ const ThemeProvider = ({ children, userId = null }) => {
   };
 
   const updateThemePalette = async (palette) => {
+    if (!isPro) {
+      return;
+    }
+
     if (!Object.prototype.hasOwnProperty.call(THEME_PALETTES, palette)) {
       return;
     }
@@ -184,7 +198,8 @@ const ThemeProvider = ({ children, userId = null }) => {
     themeMode === "system" ? systemTheme || "light" : themeMode;
 
   const baseColors = activeMode === "dark" ? darkColors : lightColors;
-  const paletteColors = THEME_PALETTES[themePalette][activeMode];
+  const activePalette = isPro ? themePalette : DEFAULT_PALETTE;
+  const paletteColors = THEME_PALETTES[activePalette][activeMode];
 
   const colors = {
     ...baseColors,
