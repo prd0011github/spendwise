@@ -12,14 +12,22 @@ const {
 
 const authenticate = require("../middleware/authMiddleware");
 
+const {
+  loginLimiter,
+  registerLimiter,
+  forgotPasswordLimiter,
+  resetPasswordLimiter,
+} = require("../middleware/rateLimitMiddleware");
+
 const router = express.Router();
 
-router.post("/register", register);
-router.post("/login", login);
+// Public authentication routes
+router.post("/register", registerLimiter, register);
+router.post("/login", loginLimiter, login);
 
 // Public password recovery routes
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);
+router.post("/reset-password", resetPasswordLimiter, resetPassword);
 
 // Authenticated routes
 router.get("/me", authenticate, getMe);

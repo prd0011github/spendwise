@@ -96,18 +96,26 @@ const updateTransaction = async (userId, transactionId, transactionData) => {
     .toISOString()
     .slice(0, 7);
 
-  console.log("Transaction date debug:", {
-    storedDate: existingTransaction.date,
-    transactionMonthKey,
-    currentMonthKey,
-    serverDate: new Date().toISOString(),
-  });
-
   if (transactionMonthKey !== currentMonthKey) {
     const error = new Error("Historical transactions cannot be edited");
-
     error.statusCode = 400;
+    throw error;
+  }
 
+  // Only allow explicitly supported fields.
+  const allowedFields = ["name", "amount", "category", "date"];
+
+  const safeUpdateData = {};
+
+  for (const field of allowedFields) {
+    if (Object.prototype.hasOwnProperty.call(transactionData, field)) {
+      safeUpdateData[field] = transactionData[field];
+    }
+  }
+
+  if (Object.keys(safeUpdateData).length === 0) {
+    const error = new Error("No valid transaction fields provided");
+    error.statusCode = 400;
     throw error;
   }
 
@@ -116,7 +124,7 @@ const updateTransaction = async (userId, transactionId, transactionData) => {
       _id: transactionId,
       userId,
     },
-    transactionData,
+    { $set: safeUpdateData },
     {
       new: true,
       runValidators: true,
@@ -145,13 +153,6 @@ const deleteTransaction = async (userId, transactionId) => {
   const transactionMonthKey = new Date(existingTransaction.date)
     .toISOString()
     .slice(0, 7);
-
-  console.log("Transaction date debug:", {
-    storedDate: existingTransaction.date,
-    transactionMonthKey,
-    currentMonthKey,
-    serverDate: new Date().toISOString(),
-  });
 
   if (transactionMonthKey !== currentMonthKey) {
     const error = new Error("Historical transactions cannot be deleted");

@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const Transaction = require("../models/Transaction");
 const Budget = require("../models/Budget");
 const User = require("../models/User");
+const mongoose = require("mongoose");
 const { sendPasswordResetEmail } = require("./emailService");
 
 const registerUser = async ({ name, email, password }) => {
@@ -49,10 +50,12 @@ const loginUser = async ({ email, password }) => {
   const token = jwt.sign(
     {
       userId: user._id,
+      tokenVersion: user.tokenVersion ?? 0,
     },
     process.env.JWT_SECRET,
     {
       expiresIn: "7d",
+      algorithm: "HS256",
     },
   );
 
@@ -117,6 +120,7 @@ const resetUserPassword = async (token, newPassword) => {
   }
 
   user.password = await bcrypt.hash(newPassword, 10);
+  user.tokenVersion = (user.tokenVersion ?? 0) + 1;
   user.passwordResetToken = null;
   user.passwordResetExpires = null;
 
@@ -168,27 +172,33 @@ const changeUserPassword = async (userId, currentPassword, newPassword) => {
   }
 
   user.password = await bcrypt.hash(newPassword, 10);
+  user.tokenVersion = (user.tokenVersion ?? 0) + 1;
 
   await user.save();
 };
 
 const deleteUserAccount = async (userId) => {
-  const user = await User.findById(userId);
+  const session = await mongoose.startSession();
 
-  if (!user) {
-    const error = new Error("User not found");
-    error.statusCode = 404;
+  try {
+    await session.withTransaction(async () => {
+      const user = await User.findById(userId).session(session);
 
-    throw error;
+      if (!user) {
+        const error = new Error("User not found");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      await Transaction.deleteMany({ userId }, { session });
+
+      await Budget.deleteMany({ userId }, { session });
+
+      await User.deleteOne({ _id: userId }, { session });
+    });
+  } finally {
+    await session.endSession();
   }
-
-  await Transaction.deleteMany({ userId });
-
-  await Budget.deleteMany({ userId });
-
-  await User.deleteOne({
-    _id: userId,
-  });
 };
 
 module.exports = {

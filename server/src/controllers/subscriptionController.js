@@ -116,6 +116,13 @@ const verifyGoogleSubscription = async (req, res) => {
       });
     }
 
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "This purchase is already linked to another account",
+      });
+    }
+
     return res.status(502).json({
       success: false,
       message: "Unable to verify the Google Play subscription right now",

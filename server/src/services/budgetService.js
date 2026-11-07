@@ -14,13 +14,17 @@ const createOrUpdateBudget = async (userId, month, budgetAmount) => {
       month,
     },
     {
-      userId,
-      month,
-      budget: budgetAmount,
+      $set: {
+        budget: budgetAmount,
+      },
+      $setOnInsert: {
+        userId,
+        month,
+      },
     },
     {
-      new: true,
       upsert: true,
+      returnDocument: "after",
       runValidators: true,
     },
   );

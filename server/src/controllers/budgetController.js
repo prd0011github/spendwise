@@ -58,12 +58,20 @@ const saveBudgetForMonth = async (req, res) => {
       });
     }
 
-    if (budget === undefined || budget === null || Number(budget) <= 0) {
+    const isValidBudget =
+      (typeof budget === "number" ||
+        (typeof budget === "string" && budget.trim() !== "")) &&
+      Number.isFinite(Number(budget)) &&
+      Number(budget) > 0;
+
+    if (!isValidBudget) {
       return res.status(400).json({
         success: false,
-        message: "Budget must be greater than 0",
+        message: "Budget must be a valid number greater than 0",
       });
     }
+
+    const budgetAmount = Number(budget);
 
     const currentMonth = getCurrentMonth();
 
@@ -77,7 +85,7 @@ const saveBudgetForMonth = async (req, res) => {
     const savedBudget = await createOrUpdateBudget(
       req.userId,
       month,
-      Number(budget),
+      budgetAmount,
     );
 
     res.status(200).json({

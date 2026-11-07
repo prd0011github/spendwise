@@ -5,16 +5,28 @@ dns.setServers(["1.1.1.1"]);
 require("dotenv").config();
 
 const express = require("express");
+const helmet = require("helmet");
 const healthRoutes = require("./routes/healthRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const budgetRoutes = require("./routes/budgetRoute");
 const authRoutes = require("./routes/authRoutes");
 const connectDatabase = require("./config/database");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
+const { generalApiLimiter } = require("./middleware/rateLimitMiddleware");
+const validateEnvironment = require("./config/validateEnvironment");
 
 const app = express();
 
-app.use(express.json());
+// Trust the Render reverse proxy to identify the client IP.
+app.set("trust proxy", 1);
+
+// Apply HTTP security headers.
+app.use(helmet());
+
+app.use(express.json({ limit: "100kb" }));
+
+// Apply a general rate limit to API requests.
+app.use("/api", generalApiLimiter);
 
 app.use("/api/health", healthRoutes);
 app.use("/api/transactions", transactionRoutes);
@@ -40,11 +52,18 @@ app.get("/.well-known/assetlinks.json", (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-  await connectDatabase();
+  try {
+    validateEnvironment();
 
-  app.listen(PORT, () => {
-    console.log(`SpendWise server running on port ${PORT}`);
-  });
+    await connectDatabase();
+
+    app.listen(PORT, () => {
+      console.log(`SpendWise server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Server startup failed:", error.message);
+    process.exit(1);
+  }
 };
 
 startServer();

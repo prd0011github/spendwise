@@ -23,6 +23,12 @@ const userSchema = new mongoose.Schema(
       minlength: [6, "Password must be at least 6 characters"],
     },
 
+    tokenVersion: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     passwordResetToken: {
       type: String,
       default: null,
@@ -68,6 +74,17 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+  },
+);
+
+userSchema.index(
+  { "subscription.purchaseTokenHash": 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      "subscription.purchaseTokenHash": { $type: "string", $gt: "" },
+    },
+    name: "unique_subscription_purchase_token_hash",
   },
 );
 
