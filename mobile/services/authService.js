@@ -16,19 +16,26 @@ import {
 
 export const login = async (email, password) => {
   const response = await loginUser(email, password);
+  const token = response.data.token;
 
-  await saveAuthToken(response.data.token);
+  try {
+    // Verify the token and fetch the latest user profile.
+    const currentUserResponse = await getCurrentUser(token);
+    const currentUser = currentUserResponse.data;
 
-  // Fetch the latest user profile, including the current Pro entitlement.
-  const currentUserResponse = await getCurrentUser(response.data.token);
-  const currentUser = currentUserResponse.data;
+    // Save the session only after successful verification.
+    await saveAuthToken(token);
+    await saveAuthUser(currentUser);
 
-  await saveAuthUser(currentUser);
-
-  return {
-    ...response.data,
-    user: currentUser,
-  };
+    return {
+      ...response.data,
+      user: currentUser,
+    };
+  } catch (error) {
+    // Remove any partially saved authentication data.
+    await removeAuthToken();
+    throw error;
+  }
 };
 
 export const register = async (name, email, password) => {
