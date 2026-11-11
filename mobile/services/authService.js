@@ -60,7 +60,14 @@ export const restoreSession = async () => {
       user: response.data,
     };
   } catch (error) {
-    if (error.message === "Invalid or expired authentication token") {
+    const isAuthError =
+      error.statusCode === 401 ||
+      error.statusCode === 403 ||
+      error.statusCode === 404 ||
+      error.message === "Invalid or expired authentication token" ||
+      error.message === "Session expired. Please log in again.";
+
+    if (isAuthError) {
       await removeAuthToken();
       return null;
     }
@@ -85,10 +92,22 @@ export const refreshCurrentUser = async () => {
     throw new Error("Please log in again to continue.");
   }
 
-  const response = await getCurrentUser(token);
-  await saveAuthUser(response.data);
+  try {
+    const response = await getCurrentUser(token);
+    await saveAuthUser(response.data);
 
-  return response.data;
+    return response.data;
+  } catch (error) {
+    if (
+      error.statusCode === 401 ||
+      error.statusCode === 403 ||
+      error.statusCode === 404
+    ) {
+      await removeAuthToken();
+    }
+
+    throw error;
+  }
 };
 
 export const logout = async () => {
