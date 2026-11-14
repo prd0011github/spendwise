@@ -7,6 +7,7 @@ const {
   requestPasswordReset,
   resetUserPassword,
 } = require("../services/authService");
+const { isProEntitled } = require("../services/proEntitlementService");
 
 const register = async (req, res) => {
   try {
@@ -82,6 +83,20 @@ const login = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const user = await getCurrentUser(req.userId);
+    const subscription = user.subscription;
+
+    const hasProAccess = isProEntitled(subscription);
+
+    let subscriptionStatus = subscription?.status || "inactive";
+
+    if (hasProAccess) {
+      subscriptionStatus = "active";
+    } else if (
+      subscription?.plan === "pro" &&
+      subscriptionStatus === "active"
+    ) {
+      subscriptionStatus = "expired";
+    }
 
     res.status(200).json({
       success: true,
@@ -90,9 +105,9 @@ const getMe = async (req, res) => {
         name: user.name,
         email: user.email,
         subscription: {
-          plan: user.subscription?.plan || "free",
-          status: user.subscription?.status || "inactive",
-          expiresAt: user.subscription?.expiresAt || null,
+          plan: hasProAccess ? "pro" : "free",
+          status: subscriptionStatus,
+          expiresAt: subscription?.expiresAt || null,
         },
       },
     });
