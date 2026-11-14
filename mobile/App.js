@@ -215,6 +215,11 @@ function App({ user, setUser }) {
   );
 
   const handleExportTransactions = async () => {
+    if (!isProUser(user)) {
+      setShowPro(true);
+      return;
+    }
+
     try {
       await exportTransactionsToCsv(monthlyTransactions);
     } catch (error) {
@@ -223,6 +228,11 @@ function App({ user, setUser }) {
   };
 
   const handlePrintReport = async () => {
+    if (!isProUser(user)) {
+      setShowPro(true);
+      return;
+    }
+
     try {
       await printTransactionsReport(monthlyTransactions, formatAmount);
     } catch (error) {

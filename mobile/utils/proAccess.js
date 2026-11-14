@@ -16,8 +16,14 @@ export const isProUser = (user) => {
     return false;
   }
 
-  // If an expiry date exists, it must still be in the future.
-  if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
+  // Require a valid expiry date that is still in the future.
+  if (!expiresAt) {
+    return false;
+  }
+
+  const expiryTimestamp = new Date(expiresAt).getTime();
+
+  if (!Number.isFinite(expiryTimestamp) || expiryTimestamp <= Date.now()) {
     return false;
   }
 
@@ -27,8 +33,9 @@ export const isProUser = (user) => {
 export const canAccessProFeature = (user, feature) => {
   const proOnlyFeatures = Object.values(PRO_FEATURES);
 
+  // Unknown feature identifiers must never grant access.
   if (!proOnlyFeatures.includes(feature)) {
-    return true;
+    return false;
   }
 
   return isProUser(user);
