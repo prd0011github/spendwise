@@ -61,16 +61,19 @@ const claimRtdnEvent = async (messageId) => {
 };
 
 const completeRtdnEvent = async (messageId, lockToken) => {
+  const now = new Date();
+
   const result = await GoogleRtdnEvent.findOneAndUpdate(
     {
       messageId,
       status: "processing",
       lockToken,
+      leaseUntil: { $gt: now },
     },
     {
       $set: {
         status: "completed",
-        completedAt: new Date(),
+        completedAt: now,
         leaseUntil: null,
         lockToken: null,
       },
@@ -84,15 +87,18 @@ const completeRtdnEvent = async (messageId, lockToken) => {
 };
 
 const releaseRtdnEvent = async (messageId, lockToken) => {
+  const now = new Date();
+
   const result = await GoogleRtdnEvent.findOneAndUpdate(
     {
       messageId,
       status: "processing",
       lockToken,
+      leaseUntil: { $gt: now },
     },
     {
       $set: {
-        leaseUntil: new Date(),
+        leaseUntil: now,
         lockToken: null,
       },
     },

@@ -1,3 +1,5 @@
+const mongoose = require("mongoose");
+
 const getHealthStatus = () => {
   return {
     success: true,
@@ -5,6 +7,19 @@ const getHealthStatus = () => {
   };
 };
 
+const getReadinessStatus = () => {
+  const databaseConnected = mongoose.connection.readyState === 1;
+
+  return {
+    success: databaseConnected,
+    status: databaseConnected ? "ready" : "not_ready",
+    checks: {
+      database: databaseConnected ? "connected" : "disconnected",
+    },
+  };
+};
+
 module.exports = {
   getHealthStatus,
+  getReadinessStatus,
 };

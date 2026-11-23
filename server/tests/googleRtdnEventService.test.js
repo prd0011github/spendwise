@@ -20,6 +20,15 @@ const matches = (record, filter) => {
     return false;
   }
 
+  if (filter.leaseUntil?.$gt) {
+    if (
+      !(record.leaseUntil instanceof Date) ||
+      record.leaseUntil <= filter.leaseUntil.$gt
+    ) {
+      return false;
+    }
+  }
+
   if (filter.$or) {
     return filter.$or.some((condition) => {
       if (condition.leaseUntil === null) {
@@ -120,10 +129,7 @@ test("completed event is recognized as a duplicate", async () => {
 
   const first = await claimRtdnEvent("message-3");
 
-  const completed = await completeRtdnEvent(
-    "message-3",
-    first.lockToken,
-  );
+  const completed = await completeRtdnEvent("message-3", first.lockToken);
 
   assert.equal(completed, true);
 
@@ -155,10 +161,7 @@ test("old worker cannot complete an event after lease is reclaimed", async () =>
 
   const second = await claimRtdnEvent("message-5");
 
-  const oldWorkerResult = await completeRtdnEvent(
-    "message-5",
-    first.lockToken,
-  );
+  const oldWorkerResult = await completeRtdnEvent("message-5", first.lockToken);
 
   const newWorkerResult = await completeRtdnEvent(
     "message-5",
@@ -174,10 +177,7 @@ test("released event can be claimed again", async () => {
 
   const first = await claimRtdnEvent("message-6");
 
-  const released = await releaseRtdnEvent(
-    "message-6",
-    first.lockToken,
-  );
+  const released = await releaseRtdnEvent("message-6", first.lockToken);
 
   assert.equal(released, true);
 
@@ -196,11 +196,34 @@ test("old worker cannot release a reclaimed event", async () => {
 
   const second = await claimRtdnEvent("message-7");
 
-  const oldWorkerResult = await releaseRtdnEvent(
-    "message-7",
-    first.lockToken,
-  );
+  const oldWorkerResult = await releaseRtdnEvent("message-7", first.lockToken);
 
   assert.equal(oldWorkerResult, false);
   assert.equal(records.get("message-7").lockToken, second.lockToken);
+});
+
+test("expired worker cannot complete an event before it is reclaimed", async () => {
+  records.clear();
+
+  const first = await claimRtdnEvent("message-8");
+
+  records.get("message-8").leaseUntil = new Date(Date.now() - 1000);
+
+  const result = await completeRtdnEvent("message-8", first.lockToken);
+
+  assert.equal(result, false);
+  assert.equal(records.get("message-8").status, "processing");
+});
+
+test("expired worker cannot release an event before it is reclaimed", async () => {
+  records.clear();
+
+  const first = await claimRtdnEvent("message-9");
+
+  records.get("message-9").leaseUntil = new Date(Date.now() - 1000);
+
+  const result = await releaseRtdnEvent("message-9", first.lockToken);
+
+  assert.equal(result, false);
+  assert.equal(records.get("message-9").lockToken, first.lockToken);
 });

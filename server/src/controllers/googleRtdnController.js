@@ -31,8 +31,31 @@ const googleRtdnController = async (req, res) => {
 
   let notification;
 
+  if (typeof message.data !== "string" || message.data.trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid RTDN notification encoding",
+    });
+  }
+
+  const encodedData = message.data.trim();
+
+  const isValidBase64 =
+    encodedData.length > 0 &&
+    encodedData.length % 4 === 0 &&
+    /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(
+      encodedData,
+    );
+
+  if (!isValidBase64) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid RTDN notification encoding",
+    });
+  }
+
   try {
-    const decodedData = Buffer.from(message.data, "base64").toString("utf8");
+    const decodedData = Buffer.from(encodedData, "base64").toString("utf8");
     notification = JSON.parse(decodedData);
   } catch {
     return res.status(400).json({
@@ -50,7 +73,20 @@ const googleRtdnController = async (req, res) => {
 
   const messageId = message.messageId.trim();
 
-  if (notification.testNotification) {
+  if (notification.testNotification !== undefined) {
+    if (
+      !notification.testNotification ||
+      typeof notification.testNotification !== "object" ||
+      Array.isArray(notification.testNotification) ||
+      notification.subscriptionNotification !== undefined ||
+      notification.voidedPurchaseNotification !== undefined
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid test notification payload",
+      });
+    }
+
     console.log("Google Play RTDN test notification received:", {
       messageId,
       packageName: notification.packageName,
@@ -63,8 +99,20 @@ const googleRtdnController = async (req, res) => {
 
   const voidedPurchaseNotification = notification.voidedPurchaseNotification;
 
+  const hasSubscriptionNotification = subscriptionNotification !== undefined;
+
+  const hasVoidedPurchaseNotification =
+    voidedPurchaseNotification !== undefined;
+
+  const isValidNotificationObject = (value) =>
+    value !== null && typeof value === "object" && !Array.isArray(value);
+
   if (
-    Boolean(subscriptionNotification) === Boolean(voidedPurchaseNotification)
+    (hasSubscriptionNotification &&
+      !isValidNotificationObject(subscriptionNotification)) ||
+    (hasVoidedPurchaseNotification &&
+      !isValidNotificationObject(voidedPurchaseNotification)) ||
+    hasSubscriptionNotification === hasVoidedPurchaseNotification
   ) {
     return res.status(400).json({
       success: false,

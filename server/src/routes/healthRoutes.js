@@ -1,11 +1,13 @@
 const express = require("express");
 
-const { getHealth } = require("../controllers/healthController");
+const { getHealth, getReadiness } = require("../controllers/healthController");
+
 const authenticate = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
 router.get("/", getHealth);
+router.get("/ready", getReadiness);
 
 router.get("/protected", authenticate, (req, res) => {
   res.status(200).json({

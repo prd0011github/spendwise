@@ -451,3 +451,135 @@ test("rejects notifications from a different package", async () => {
   assert.equal(res.statusCode, 400);
   assert.equal(calls.claimedIds.length, 0);
 });
+
+test("returns 400 when RTDN data contains invalid Base64", async () => {
+  const req = createRequest({
+    subscriptionNotification: {
+      purchaseToken: "test-purchase-token",
+    },
+  });
+
+  req.body.message.data = "invalid-base64!";
+
+  const res = createResponse();
+
+  await googleRtdnController(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(calls.claimedIds.length, 0);
+});
+
+test("returns 400 when RTDN data contains invalid JSON", async () => {
+  const req = createRequest({
+    subscriptionNotification: {
+      purchaseToken: "test-purchase-token",
+    },
+  });
+
+  req.body.message.data = Buffer.from("{invalid-json").toString("base64");
+
+  const res = createResponse();
+
+  await googleRtdnController(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(calls.claimedIds.length, 0);
+});
+
+test("returns 400 when the decoded RTDN payload is an array", async () => {
+  const req = createRequest({});
+  req.body.message.data = Buffer.from(
+    JSON.stringify(["invalid-payload"]),
+  ).toString("base64");
+
+  const res = createResponse();
+
+  await googleRtdnController(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(calls.claimedIds.length, 0);
+});
+
+test("returns 400 when subscriptionNotification is not an object", async () => {
+  const req = createRequest({
+    subscriptionNotification: "invalid",
+  });
+
+  const res = createResponse();
+
+  await googleRtdnController(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(calls.claimedIds.length, 0);
+});
+
+test("returns 400 when voidedPurchaseNotification is not an object", async () => {
+  const req = createRequest({
+    voidedPurchaseNotification: [],
+  });
+
+  const res = createResponse();
+
+  await googleRtdnController(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(calls.claimedIds.length, 0);
+});
+
+test("returns 400 when testNotification is not an object", async () => {
+  const req = createRequest({
+    testNotification: "invalid",
+  });
+
+  const res = createResponse();
+
+  await googleRtdnController(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(calls.claimedIds.length, 0);
+});
+
+test("returns 400 when subscription and voided notifications are both present", async () => {
+  const req = createRequest({
+    subscriptionNotification: {
+      purchaseToken: "test-purchase-token",
+    },
+    voidedPurchaseNotification: {
+      purchaseToken: "test-purchase-token",
+      orderId: "test-order",
+    },
+  });
+
+  const res = createResponse();
+
+  await googleRtdnController(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(calls.claimedIds.length, 0);
+});
+
+test("returns 503 even when releasing a failed event throws", async () => {
+  subscriptionError = new Error("Google Play API unavailable");
+  releaseError = new Error("Database unavailable");
+
+  const originalConsoleError = console.error;
+  console.error = () => {};
+
+  try {
+    const req = createRequest({
+      subscriptionNotification: {
+        purchaseToken: "test-purchase-token",
+      },
+    });
+
+    const res = createResponse();
+
+    await googleRtdnController(req, res);
+
+    assert.equal(res.statusCode, 503);
+    assert.equal(calls.completed.length, 0);
+    assert.equal(calls.released.length, 1);
+  } finally {
+    console.error = originalConsoleError;
+  }
+});
