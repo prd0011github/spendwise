@@ -37,6 +37,7 @@ const verifyGoogleSubscription = async (req, res) => {
       .update(purchaseToken)
       .digest("hex");
 
+    // Prevent a purchase token from being linked to another account.
     const existingOwner = await User.findOne({
       "subscription.purchaseTokenHash": purchaseTokenHash,
     }).select("+subscription.purchaseTokenHash");
@@ -60,17 +61,66 @@ const verifyGoogleSubscription = async (req, res) => {
       });
     }
 
-    user.subscription = {
-      ...(user.subscription || {}),
-      plan: "pro",
-      status: "active",
-      billingProvider: "google_play",
-      productId: verified.productId,
-      purchaseTokenHash,
-      expiresAt: verified.expiresAt,
-    };
+    // Do not overwrite a subscription belonging to another provider.
+    if (
+      user.subscription?.billingProvider &&
+      user.subscription.billingProvider !== "google_play"
+    ) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "An active subscription from another billing provider already exists",
+      });
+    }
 
-    await user.save();
+    const currentRevision = user.subscription?.revision ?? 0;
+
+    // Atomically update the subscription only if it has not changed
+    // since it was read. Also support older documents without revision.
+    const updatedUser = await User.findOneAndUpdate(
+      {
+        _id: req.userId,
+        $and: [
+          {
+            $or: [
+              { "subscription.revision": currentRevision },
+              { "subscription.revision": { $exists: false } },
+            ],
+          },
+          {
+            $or: [
+              { "subscription.billingProvider": "google_play" },
+              { "subscription.billingProvider": null },
+              { "subscription.billingProvider": { $exists: false } },
+            ],
+          },
+        ],
+      },
+      {
+        $set: {
+          "subscription.plan": "pro",
+          "subscription.status": "active",
+          "subscription.billingProvider": "google_play",
+          "subscription.productId": verified.productId,
+          "subscription.purchaseTokenHash": purchaseTokenHash,
+          "subscription.expiresAt": verified.expiresAt,
+        },
+        $inc: {
+          "subscription.revision": 1,
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    if (!updatedUser) {
+      return res.status(409).json({
+        success: false,
+        message: "Subscription changed during verification. Please try again.",
+      });
+    }
 
     let acknowledgementPending = false;
 
@@ -96,10 +146,10 @@ const verifyGoogleSubscription = async (req, res) => {
       success: true,
       message: "SpendWise Pro subscription verified",
       data: {
-        plan: user.subscription.plan,
-        status: user.subscription.status,
-        productId: user.subscription.productId,
-        expiresAt: user.subscription.expiresAt,
+        plan: updatedUser.subscription.plan,
+        status: updatedUser.subscription.status,
+        productId: updatedUser.subscription.productId,
+        expiresAt: updatedUser.subscription.expiresAt,
         acknowledgementPending,
       },
     });

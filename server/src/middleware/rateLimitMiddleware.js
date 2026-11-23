@@ -12,11 +12,19 @@ const createRateLimiter = (windowMs, limit, message) =>
     },
   });
 
-const generalApiLimiter = createRateLimiter(
-  15 * 60 * 1000,
-  300,
-  "Too many requests. Please try again later.",
-);
+const generalApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+
+  skip: (req) => req.path === "/subscriptions/google/rtdn",
+
+  message: {
+    success: false,
+    message: "Too many requests. Please try again later.",
+  },
+});
 
 const loginLimiter = createRateLimiter(
   15 * 60 * 1000,
